@@ -1,0 +1,261 @@
+2025-04-30 15:09:34,635 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 15:09:34,635 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 15:09:34,787 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 15:09:34,787 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 15:09:36,888 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:09:36,888 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 15:09:36,891 - INFO - Retrying in 1.06s
+2025-04-30 15:09:40,028 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:09:40,028 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 15:09:40,028 - INFO - Retrying in 2.37s
+2025-04-30 15:09:44,486 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:09:44,486 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 15:09:44,486 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 15:09:44,561 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 15:09:46,646 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:09:46,646 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 15:09:46,646 - INFO - Retrying in 1.20s
+2025-04-30 15:09:49,944 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:09:49,944 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 15:09:49,944 - INFO - Retrying in 2.07s
+2025-04-30 15:09:54,098 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:09:54,098 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 15:09:54,098 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 15:09:54,165 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 15:09:58,322 - INFO - GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point=48.8917,2.2385&unit=KMPH&openLr=false&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 200
+2025-04-30 15:09:58,425 - INFO - GET https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 400
+2025-04-30 15:09:58,425 - ERROR - Client error 400 for https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO
+2025-04-30 15:09:58,547 - INFO - GET https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp - Status: 404
+2025-04-30 15:09:58,547 - ERROR - Resource not found (404) for https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp
+2025-04-30 15:10:01,561 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Status: 500
+2025-04-30 15:10:01,561 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Attempt 1/3
+2025-04-30 15:10:01,561 - INFO - Retrying in 1.42s
+2025-04-30 15:10:05,057 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Status: 500
+2025-04-30 15:10:05,057 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Attempt 2/3
+2025-04-30 15:10:05,057 - INFO - Retrying in 2.74s
+2025-04-30 15:10:09,883 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Status: 500
+2025-04-30 15:10:09,884 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Attempt 3/3
+2025-04-30 15:10:09,884 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1
+2025-04-30 15:10:11,952 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Status: 500
+2025-04-30 15:10:11,953 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Attempt 1/3
+2025-04-30 15:10:11,953 - INFO - Retrying in 1.23s
+2025-04-30 15:10:15,288 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Status: 500
+2025-04-30 15:10:15,288 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Attempt 2/3
+2025-04-30 15:10:15,288 - INFO - Retrying in 2.88s
+2025-04-30 15:10:20,254 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Status: 500
+2025-04-30 15:10:20,254 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Attempt 3/3
+2025-04-30 15:10:20,255 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A
+2025-04-30 15:10:20,399 - INFO - GET https://data.ratp.fr/api/records/1.0/search/ - Status: 404
+2025-04-30 15:10:20,399 - ERROR - Resource not found (404) for https://data.ratp.fr/api/records/1.0/search/
+2025-04-30 15:10:20,536 - INFO - GET https://data.ratp.fr/api/records/1.0/search/ - Status: 404
+2025-04-30 15:10:20,536 - ERROR - Resource not found (404) for https://data.ratp.fr/api/records/1.0/search/
+2025-04-30 15:11:00,672 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 15:11:00,672 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 15:11:00,748 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 15:11:00,749 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 15:11:02,853 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:11:02,853 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 15:11:02,853 - INFO - Retrying in 1.83s
+2025-04-30 15:11:06,758 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:11:06,758 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 15:11:06,758 - INFO - Retrying in 2.54s
+2025-04-30 15:11:11,389 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:11:11,389 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 15:11:11,389 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 15:11:11,467 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 15:11:13,554 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:11:13,554 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 15:11:13,554 - INFO - Retrying in 1.32s
+2025-04-30 15:11:16,955 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:11:16,955 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 15:11:16,955 - INFO - Retrying in 2.63s
+2025-04-30 15:11:21,680 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:11:21,680 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 15:11:21,680 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 15:11:21,746 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 15:11:25,953 - INFO - GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point=48.8917,2.2385&unit=KMPH&openLr=false&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 200
+2025-04-30 15:11:26,049 - INFO - GET https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 400
+2025-04-30 15:11:26,049 - ERROR - Client error 400 for https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO
+2025-04-30 15:11:26,173 - INFO - GET https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp - Status: 404
+2025-04-30 15:11:26,173 - ERROR - Resource not found (404) for https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp
+2025-04-30 15:11:29,146 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Status: 500
+2025-04-30 15:11:29,147 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Attempt 1/3
+2025-04-30 15:11:29,147 - INFO - Retrying in 1.79s
+2025-04-30 15:11:33,023 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Status: 500
+2025-04-30 15:11:33,023 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Attempt 2/3
+2025-04-30 15:11:33,023 - INFO - Retrying in 2.04s
+2025-04-30 15:11:37,154 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Status: 500
+2025-04-30 15:11:37,154 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1 - Attempt 3/3
+2025-04-30 15:11:37,154 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1
+2025-04-30 15:11:39,227 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Status: 500
+2025-04-30 15:11:39,227 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Attempt 1/3
+2025-04-30 15:11:39,227 - INFO - Retrying in 1.04s
+2025-04-30 15:11:42,361 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Status: 500
+2025-04-30 15:11:42,361 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Attempt 2/3
+2025-04-30 15:11:42,361 - INFO - Retrying in 2.18s
+2025-04-30 15:11:46,635 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Status: 500
+2025-04-30 15:11:46,635 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A - Attempt 3/3
+2025-04-30 15:11:46,635 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A
+2025-04-30 15:11:47,273 - INFO - GET https://data.ratp.fr/api/records/1.0/search/ - Status: 404
+2025-04-30 15:11:47,273 - ERROR - Resource not found (404) for https://data.ratp.fr/api/records/1.0/search/
+2025-04-30 15:11:47,395 - INFO - GET https://data.ratp.fr/api/records/1.0/search/ - Status: 404
+2025-04-30 15:11:47,395 - ERROR - Resource not found (404) for https://data.ratp.fr/api/records/1.0/search/
+2025-04-30 15:26:53,854 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 15:26:53,854 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 15:26:53,933 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 15:26:53,933 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 15:26:56,023 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:26:56,023 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 15:26:56,023 - INFO - Retrying in 1.58s
+2025-04-30 15:26:59,694 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:26:59,694 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 15:26:59,694 - INFO - Retrying in 2.07s
+2025-04-30 15:27:03,867 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:27:03,867 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 15:27:03,867 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 15:27:03,928 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 15:27:06,018 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:27:06,018 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 15:27:06,018 - INFO - Retrying in 1.46s
+2025-04-30 15:27:09,561 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:27:09,561 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 15:27:09,561 - INFO - Retrying in 2.67s
+2025-04-30 15:27:14,319 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:27:14,319 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 15:27:14,319 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 15:27:14,395 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 15:41:53,958 - INFO - GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point=48.8917,2.2385&unit=KMPH&openLr=false&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 200
+2025-04-30 15:41:54,057 - INFO - GET https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 400
+2025-04-30 15:41:54,057 - ERROR - Client error 400 for https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO
+2025-04-30 15:41:54,212 - INFO - GET https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp - Status: 404
+2025-04-30 15:41:54,212 - ERROR - Resource not found (404) for https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp
+2025-04-30 15:42:17,396 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 15:42:17,396 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 15:42:17,482 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 15:42:17,482 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 15:42:19,588 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:42:19,588 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 15:42:19,588 - INFO - Retrying in 1.66s
+2025-04-30 15:42:23,340 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:42:23,340 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 15:42:23,340 - INFO - Retrying in 2.92s
+2025-04-30 15:42:28,348 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:42:28,349 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 15:42:28,349 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 15:42:28,429 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 15:42:30,495 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:42:30,495 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 15:42:30,495 - INFO - Retrying in 1.18s
+2025-04-30 15:42:33,769 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:42:33,769 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 15:42:33,769 - INFO - Retrying in 2.57s
+2025-04-30 15:42:38,423 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:42:38,423 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 15:42:38,423 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 15:42:38,509 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 15:57:40,910 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 15:57:40,910 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 15:57:40,973 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 15:57:40,973 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 15:57:43,069 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:57:43,069 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 15:57:43,069 - INFO - Retrying in 1.99s
+2025-04-30 15:57:47,140 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:57:47,141 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 15:57:47,141 - INFO - Retrying in 2.24s
+2025-04-30 15:57:51,479 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 15:57:51,480 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 15:57:51,480 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 15:57:51,550 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 15:57:53,630 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:57:53,630 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 15:57:53,630 - INFO - Retrying in 1.62s
+2025-04-30 15:57:57,342 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:57:57,342 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 15:57:57,342 - INFO - Retrying in 2.59s
+2025-04-30 15:58:02,006 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 15:58:02,007 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 15:58:02,007 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 15:58:02,075 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 16:11:57,460 - INFO - GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point=48.8917,2.2385&unit=KMPH&openLr=false&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 200
+2025-04-30 16:11:57,534 - INFO - GET https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 400
+2025-04-30 16:11:57,534 - ERROR - Client error 400 for https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO
+2025-04-30 16:11:57,663 - INFO - GET https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp - Status: 404
+2025-04-30 16:11:57,663 - ERROR - Resource not found (404) for https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp
+2025-04-30 16:13:04,792 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 16:13:04,792 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 16:13:04,880 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 16:13:04,880 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 16:13:06,991 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:13:06,992 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 16:13:06,992 - INFO - Retrying in 1.30s
+2025-04-30 16:13:10,363 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:13:10,364 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 16:13:10,364 - INFO - Retrying in 2.89s
+2025-04-30 16:13:15,340 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:13:15,340 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 16:13:15,340 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 16:13:15,420 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 16:13:17,500 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:13:17,500 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 16:13:17,500 - INFO - Retrying in 1.14s
+2025-04-30 16:13:20,731 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:13:20,731 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 16:13:20,731 - INFO - Retrying in 2.17s
+2025-04-30 16:13:24,990 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:13:24,990 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 16:13:24,990 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 16:13:25,063 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 16:28:27,456 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 16:28:27,456 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 16:28:27,535 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 16:28:27,535 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 16:28:29,633 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:28:29,633 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 16:28:29,633 - INFO - Retrying in 1.60s
+2025-04-30 16:28:33,320 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:28:33,320 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 16:28:33,320 - INFO - Retrying in 2.73s
+2025-04-30 16:28:38,204 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:28:38,204 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 16:28:38,204 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 16:28:38,276 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 16:28:40,355 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:28:40,355 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 16:28:40,355 - INFO - Retrying in 1.46s
+2025-04-30 16:28:43,916 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:28:43,916 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 16:28:43,916 - INFO - Retrying in 2.59s
+2025-04-30 16:28:48,571 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:28:48,571 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 16:28:48,571 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 16:28:48,642 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
+2025-04-30 16:41:59,133 - INFO - GET https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point=48.8917,2.2385&unit=KMPH&openLr=false&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 200
+2025-04-30 16:41:59,250 - INFO - GET https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO - Status: 400
+2025-04-30 16:41:59,251 - ERROR - Client error 400 for https://api.tomtom.com/traffic/services/5/incidentDetails?bbox=2.22,48.88,2.25,48.9&fields={incidents{type,geometry{type,coordinates},properties{iconCategory,magnitudeOfDelay,events{description,code},startTime,endTime,from,to,length,delay,roadNumbers,timeValidity}}&language=fr-FR&timeValidityFilter=present&key=HqfYzA2MsXY66FWxaAGpLkAKHtoIA0AO
+2025-04-30 16:41:59,385 - INFO - GET https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp - Status: 404
+2025-04-30 16:41:59,385 - ERROR - Resource not found (404) for https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp
+2025-04-30 16:43:51,532 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R - Status: 400
+2025-04-30 16:43:51,532 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/schedules/metro/1/la+defense/A+R
+2025-04-30 16:43:51,603 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1 - Status: 400
+2025-04-30 16:43:51,603 - ERROR - Client error 400 for https://api-ratp.pierre-grimaud.fr/v4/traffic/metro/1
+2025-04-30 16:43:53,708 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:43:53,708 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 1/3
+2025-04-30 16:43:53,708 - INFO - Retrying in 1.06s
+2025-04-30 16:43:56,841 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:43:56,841 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 2/3
+2025-04-30 16:43:56,841 - INFO - Retrying in 2.53s
+2025-04-30 16:44:01,458 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Status: 500
+2025-04-30 16:44:01,458 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R - Attempt 3/3
+2025-04-30 16:44:01,458 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/tramways/2/la+defense/A+R
+2025-04-30 16:44:01,575 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/tramways/2 - Status: 200
+2025-04-30 16:44:03,654 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:44:03,654 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 1/3
+2025-04-30 16:44:03,654 - INFO - Retrying in 1.55s
+2025-04-30 16:44:07,291 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:44:07,291 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 2/3
+2025-04-30 16:44:07,291 - INFO - Retrying in 2.86s
+2025-04-30 16:44:12,241 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Status: 500
+2025-04-30 16:44:12,241 - WARNING - Server error 500 for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R - Attempt 3/3
+2025-04-30 16:44:12,241 - ERROR - All 3 attempts failed for https://api-ratp.pierre-grimaud.fr/v4/schedules/rers/A/la+defense/A+R
+2025-04-30 16:44:12,291 - INFO - GET https://api-ratp.pierre-grimaud.fr/v4/traffic/rers/A - Status: 200
