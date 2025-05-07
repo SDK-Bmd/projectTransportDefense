@@ -16,11 +16,11 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from data_extraction import config
+from config import config
 
 # Set up logging
 logging.basicConfig(
-    filename='data_quality.log',
+    filename='../data_extraction/data_quality.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )

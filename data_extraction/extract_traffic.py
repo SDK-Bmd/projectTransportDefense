@@ -1,15 +1,13 @@
 """
 Traffic data extraction script for La Défense area
 """
-import requests
 import json
 from datetime import datetime
 import os
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-from bs4 import BeautifulSoup
-import config
+from config import config
 from api_utils import get_with_retries, API_ENDPOINTS
 
 # Load environment variables

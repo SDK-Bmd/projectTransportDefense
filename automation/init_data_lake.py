@@ -3,16 +3,13 @@ Initialization script for the La Défense mobility data lake
 This script sets up the data lake structure and tests connectivity
 """
 import os
-import sys
 import boto3
 from botocore.client import Config
 import json
 import requests
 from dotenv import load_dotenv
-import pandas as pd
-import time
 from datetime import datetime
-import config
+from config import config
 
 
 def check_environment():
@@ -67,7 +64,7 @@ def check_environment():
 
         create_env = input("Do you want to create a .env file now? (y/n): ")
         if create_env.lower() == 'y':
-            with open(".env", "w") as env_file:
+            with open("../data_extraction/.env", "w") as env_file:
                 for key, description in api_keys.items():
                     value = input(f"Enter API key for {description} ({key}): ")
                     env_file.write(f"{key}={value}\n")

@@ -71,7 +71,36 @@ EXTRACTION_CONFIG = {
         "max_files_to_keep": 30
     },
     "dataQuality": {
-        "frequency_minutes": 360,  # Once per day
+        "frequency_minutes": 360,  # Six hours
         "max_files_to_keep": 30
     }
+}
+
+# API endpoints - moved from api_utils.py
+API_ENDPOINTS = {
+    # RATP API endpoints
+    'ratp_metro_line1': 'https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1',
+    'ratp_rer_lineA': 'https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A',
+    'ratp_tram_line2': 'https://api-ratp.pierre-grimaud.fr/v4/stations/tramways/2',
+
+    # RATP schedules (replace {type}, {line}, {station} in code)
+    'ratp_schedules': 'https://api-ratp.pierre-grimaud.fr/v4/schedules/{type}/{line}/{station}/A+R',
+
+    # RATP traffic (replace {type}, {line} in code)
+    'ratp_traffic': 'https://api-ratp.pierre-grimaud.fr/v4/traffic/{type}/{line}',
+
+    # RATP equipment
+    'ratp_equipment': 'https://data.ratp.fr/api/records/1.0/search/',
+
+    # RATP accessibility
+    'ratp_accessibility': 'https://data.ratp.fr/api/records/1.0/search/',
+
+    # Sytadin traffic
+    'sytadin_traffic': 'https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp',
+
+    # Overpass API
+    'osm_overpass': 'http://overpass-api.de/api/interpreter',
+
+    # Navitia API (base URL)
+    'navitia_base': 'https://api.navitia.io/v1/'
 }

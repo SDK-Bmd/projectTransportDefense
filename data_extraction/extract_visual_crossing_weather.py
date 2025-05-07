@@ -8,7 +8,7 @@ import os
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-import config
+from config import config
 
 # Load environment variables
 load_dotenv()

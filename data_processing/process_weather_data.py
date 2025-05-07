@@ -2,41 +2,42 @@
 Weather data processing script for La Défense
 Transforms Visual Crossing weather data into analysis-ready formats
 """
-import boto3
-import json
-import pandas as pd
-from io import BytesIO
-from datetime import datetime, timedelta
+import sys
 import os
-import config
-from botocore.client import Config
+import pandas as pd
+from datetime import datetime
+import logging
 
+# Add the parent directory to sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
 
-def get_s3_client():
-    """Create and return an S3 client connected to MinIO"""
-    return boto3.client(
-        's3',
-        endpoint_url=config.DATA_LAKE["endpoint_url"],
-        aws_access_key_id=config.DATA_LAKE["access_key"],
-        aws_secret_access_key=config.DATA_LAKE["secret_key"],
-        config=Config(signature_version='s3v4'),
-        region_name='us-east-1'
-    )
+from utils.data_lake_utils import read_json_from_data_lake, save_parquet_to_data_lake
+from config.config import DATA_LAKE
 
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('process_weather')
 
 def process_weather_data():
     """Process raw weather data from the landing zone to the refined zone"""
-    s3 = get_s3_client()
-    bucket_name = config.DATA_LAKE["bucket_name"]
+    bucket_name = DATA_LAKE["bucket_name"]
 
     # Get the latest weather data
     try:
         latest_key = "landing/weather/visual_crossing_latest.json"
-        response = s3.get_object(Bucket=bucket_name, Key=latest_key)
-        content = response['Body'].read().decode('utf-8')
-        data = json.loads(content)
+        data = read_json_from_data_lake(bucket_name, latest_key)
 
-        print(f"Processing weather data from {latest_key}...")
+        if not data:
+            logger.error(f"No data found in {latest_key}")
+            return False
+
+        logger.info(f"Processing weather data from {latest_key}...")
 
         # Extract current conditions
         current = data.get("current_conditions", {})
@@ -103,66 +104,29 @@ def process_weather_data():
         timestamp = datetime.now().strftime("%Y%m%d")
 
         # Save current conditions
-        current_bytes = BytesIO()
-        current_df.to_parquet(current_bytes)
         current_key = f"refined/weather/current_{timestamp}.parquet"
-        s3.put_object(
-            Bucket=bucket_name,
-            Key=current_key,
-            Body=current_bytes.getvalue()
-        )
-        print(f"Saved current conditions to {current_key}")
+        save_parquet_to_data_lake(bucket_name, current_key, current_df)
+        logger.info(f"Saved current conditions to {current_key}")
 
         # Save daily forecast
-        daily_bytes = BytesIO()
-        daily_df.to_parquet(daily_bytes)
         daily_key = f"refined/weather/daily_{timestamp}.parquet"
-        s3.put_object(
-            Bucket=bucket_name,
-            Key=daily_key,
-            Body=daily_bytes.getvalue()
-        )
-        print(f"Saved daily forecast to {daily_key}")
+        save_parquet_to_data_lake(bucket_name, daily_key, daily_df)
+        logger.info(f"Saved daily forecast to {daily_key}")
 
         # Save hourly forecast
-        hourly_bytes = BytesIO()
-        hourly_df.to_parquet(hourly_bytes)
         hourly_key = f"refined/weather/hourly_{timestamp}.parquet"
-        s3.put_object(
-            Bucket=bucket_name,
-            Key=hourly_key,
-            Body=hourly_bytes.getvalue()
-        )
-        print(f"Saved hourly forecast to {hourly_key}")
+        save_parquet_to_data_lake(bucket_name, hourly_key, hourly_df)
+        logger.info(f"Saved hourly forecast to {hourly_key}")
 
         # Also save the latest versions for easy access
-        current_latest_bytes = BytesIO()
-        current_df.to_parquet(current_latest_bytes)
-        s3.put_object(
-            Bucket=bucket_name,
-            Key="refined/weather/current_latest.parquet",
-            Body=current_latest_bytes.getvalue()
-        )
+        save_parquet_to_data_lake(bucket_name, "refined/weather/current_latest.parquet", current_df)
+        save_parquet_to_data_lake(bucket_name, "refined/weather/daily_latest.parquet", daily_df)
+        save_parquet_to_data_lake(bucket_name, "refined/weather/hourly_latest.parquet", hourly_df)
 
-        daily_latest_bytes = BytesIO()
-        daily_df.to_parquet(daily_latest_bytes)
-        s3.put_object(
-            Bucket=bucket_name,
-            Key="refined/weather/daily_latest.parquet",
-            Body=daily_latest_bytes.getvalue()
-        )
-
-        hourly_latest_bytes = BytesIO()
-        hourly_df.to_parquet(hourly_latest_bytes)
-        s3.put_object(
-            Bucket=bucket_name,
-            Key="refined/weather/hourly_latest.parquet",
-            Body=hourly_latest_bytes.getvalue()
-        )
-
+        logger.info("Weather data processing completed successfully")
         return True
     except Exception as e:
-        print(f"Error processing weather data: {str(e)}")
+        logger.error(f"Error processing weather data: {str(e)}")
         return False
 
 

@@ -1,13 +1,11 @@
 """
 Station data extraction script for La Défense using RATP API
 """
-import requests
 import json
 from datetime import datetime
-import os
 import boto3
 from botocore.client import Config
-import config
+from config import config
 from api_utils import get_with_retries, API_ENDPOINTS
 
 def get_s3_client():

@@ -7,6 +7,18 @@ import random
 import logging
 from datetime import datetime
 
+# Import configuration
+import sys
+import os
+
+# Add the parent directory to sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
+from config.config import API_ENDPOINTS
+
 # Set up logging
 logging.basicConfig(
     filename='api_requests.log',
@@ -61,29 +73,3 @@ def get_with_retries(url, max_retries=3, backoff_factor=2, timeout=10,
 
     logger.error(f"All {max_retries} attempts failed for {url}")
     return None
-
-# API endpoint constants - centralize URL definitions here
-API_ENDPOINTS = {
-    # RATP API endpoints
-    'ratp_metro_line1': 'https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1',
-    'ratp_rer_lineA': 'https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A',
-    'ratp_tram_line2': 'https://api-ratp.pierre-grimaud.fr/v4/stations/tramways/2',
-
-    # RATP schedules (replace {type}, {line}, {station} in code)
-    'ratp_schedules': 'https://api-ratp.pierre-grimaud.fr/v4/schedules/{type}/{line}/{station}/A+R',
-
-    # RATP traffic (replace {type}, {line} in code)
-    'ratp_traffic': 'https://api-ratp.pierre-grimaud.fr/v4/traffic/{type}/{line}',
-
-    # RATP equipment
-    'ratp_equipment': 'https://data.ratp.fr/api/records/1.0/search/',
-
-    # RATP accessibility
-    'ratp_accessibility': 'https://data.ratp.fr/api/records/1.0/search/',
-
-    # Sytadin traffic (updated URL)
-    'sytadin_traffic': 'https://www.sytadin.fr/gp/sytadin/data_traffic.jsp.data/traffic.jsp',
-
-    # Overpass API
-    'osm_overpass': 'http://overpass-api.de/api/interpreter'
-}
