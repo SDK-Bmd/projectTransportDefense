@@ -17,7 +17,7 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from config.config import API_ENDPOINTS
+from configuration.config import API_ENDPOINTS
 
 # Set up logging
 logging.basicConfig(

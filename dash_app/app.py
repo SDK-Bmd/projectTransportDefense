@@ -19,12 +19,13 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 # Import project modules
-from config.config import DATA_LAKE, LADEFENSE_COORDINATES
+from configuration.config import DATA_LAKE, LADEFENSE_COORDINATES
 from utils.data_lake_utils import get_s3_client, read_parquet_from_data_lake, read_json_from_data_lake
 from dash_app.components.maps import render_station_map, render_traffic_heatmap
 from dash_app.components.weather import render_weather_section
 from dash_app.components.transport import render_transport_status, render_schedules, render_schedule_summary
 from dash_app.components.stations import render_station_details, render_accessibility_overview
+
 
 # Load data functions
 @st.cache_data(ttl=3600)  # Cache for 1 hour
@@ -47,19 +48,43 @@ def load_weather_data():
         st.error(f"Error loading weather data: {str(e)}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+
 @st.cache_data(ttl=3600)
 def load_transport_data():
     """Load transport schedules and traffic status"""
     bucket_name = DATA_LAKE["bucket_name"]
 
     try:
-        # Get traffic status
-        traffic_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/traffic_latest.parquet')
+        # Get traffic status - first try IDFM data, then fallback to RATP data
+        try:
+            traffic_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/traffic_latest.parquet')
+        except Exception:
+            traffic_df = pd.DataFrame()
 
-        # Get schedules if available
-        schedules_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/schedules_latest.parquet')
+        # If IDFM traffic data failed, try loading from RATP source as fallback
+        if traffic_df.empty:
+            try:
+                st.warning("Primary traffic data source unavailable, using fallback source")
+                traffic_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/ratp_traffic_latest.parquet')
+            except Exception:
+                traffic_df = pd.DataFrame()
 
-        # If schedules_df is empty, create a template
+        # Get schedules if available - first try IDFM data, then fallback to RATP data
+        try:
+            schedules_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/schedules_latest.parquet')
+        except Exception:
+            schedules_df = pd.DataFrame()
+
+        # If IDFM schedules failed, try loading from RATP source as fallback
+        if schedules_df.empty:
+            try:
+                st.warning("Primary schedules data source unavailable, using fallback source")
+                schedules_df = read_parquet_from_data_lake(bucket_name,
+                                                           'refined/transport/ratp_schedules_latest.parquet')
+            except Exception:
+                schedules_df = pd.DataFrame(columns=['transport_type', 'line', 'direction', 'message'])
+
+        # If still empty, create a template DataFrame
         if schedules_df.empty:
             schedules_df = pd.DataFrame(columns=['transport_type', 'line', 'direction', 'message'])
 
@@ -68,18 +93,33 @@ def load_transport_data():
         st.error(f"Error loading transport data: {str(e)}")
         return pd.DataFrame(columns=['transport_type', 'line', 'direction', 'message']), pd.DataFrame()
 
+
 @st.cache_data(ttl=3600)
 def load_station_data():
     """Load station information"""
     bucket_name = DATA_LAKE["bucket_name"]
 
     try:
-        # Get combined station data
-        stations_df = read_parquet_from_data_lake(bucket_name, 'refined/stations/combined_stations_latest.parquet')
+        # First try to get combined stations data from IDFM
+        try:
+            stations_df = read_parquet_from_data_lake(bucket_name, 'refined/stations/combined_stations_latest.parquet')
+        except Exception:
+            stations_df = pd.DataFrame()
+
+        # If IDFM stations data failed, try loading from original RATP+OSM source as fallback
+        if stations_df.empty:
+            try:
+                st.warning("Primary stations data source unavailable, using fallback source")
+                stations_df = read_parquet_from_data_lake(bucket_name,
+                                                          'refined/stations/ratp_osm_combined_latest.parquet')
+            except Exception:
+                stations_df = pd.DataFrame()
+
         return stations_df
     except Exception as e:
         st.error(f"Error loading station data: {str(e)}")
         return pd.DataFrame()
+
 
 @st.cache_data(ttl=3600)
 def load_traffic_data():
@@ -93,6 +133,7 @@ def load_traffic_data():
     except Exception as e:
         st.error(f"Error loading traffic data: {str(e)}")
         return {}
+
 
 @st.cache_data(ttl=1800)  # Cache for 30 minutes
 def load_data_quality_status():
@@ -130,6 +171,20 @@ def load_data_quality_status():
     except Exception as e:
         return {"status": "Error", "details": f"Error parsing quality logs: {str(e)}"}
 
+
+@st.cache_data(ttl=3600)
+def load_idfm_data():
+    """Load raw IDFM data for additional detailed information"""
+    bucket_name = DATA_LAKE["bucket_name"]
+
+    try:
+        idfm_data = read_json_from_data_lake(bucket_name, 'landing/transport/idfm_ladefense_latest.json')
+        return idfm_data
+    except Exception as e:
+        st.error(f"Error loading IDFM raw data: {str(e)}")
+        return {}
+
+
 # Main function to load all data
 def load_all_data():
     with st.spinner("Loading data..."):
@@ -138,6 +193,7 @@ def load_all_data():
         stations_df = load_station_data()
         road_traffic_data = load_traffic_data()
         quality_status = load_data_quality_status()
+        idfm_data = load_idfm_data()
 
         return {
             "current_weather": current_weather,
@@ -147,8 +203,10 @@ def load_all_data():
             "traffic_status": traffic_df,
             "stations": stations_df,
             "road_traffic": road_traffic_data,
-            "quality_status": quality_status
+            "quality_status": quality_status,
+            "idfm_raw": idfm_data
         }
+
 
 # Page configuration
 st.set_page_config(
@@ -162,8 +220,12 @@ st.set_page_config(
 st.sidebar.title("La Défense Mobility")
 page = st.sidebar.selectbox(
     "Choose a page",
-    ["Overview", "Route Planner", "Weather Impact", "Transport Analysis", "Station Information", "Data Quality", "Predictions"]
+    ["Overview", "Route Planner", "Weather Impact", "Transport Analysis", "Station Information", "Data Quality",
+     "Predictions"]
 )
+
+# Data source indicator
+data_source = st.sidebar.empty()
 
 # Last refresh time
 st.sidebar.markdown("---")
@@ -173,10 +235,16 @@ st.sidebar.write(f"Last data refresh: {refresh_time}")
 # Button to refresh data
 if st.sidebar.button("Refresh Data"):
     st.cache_data.clear()
-    st.experimental_rerun()
+    st.rerun()
 
 # Load the data
 all_data = load_all_data()
+
+# Determine and display data source
+if all_data["idfm_raw"]:
+    data_source.success("Using IDFM data")
+else:
+    data_source.warning("Using RATP data (fallback)")
 
 # Prepare the date
 current_date = datetime.now().strftime("%Y-%m-%d")

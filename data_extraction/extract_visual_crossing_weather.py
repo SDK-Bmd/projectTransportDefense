@@ -8,7 +8,7 @@ import os
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-from config import config
+from configuration import config
 
 # Load environment variables
 load_dotenv()
@@ -125,8 +125,8 @@ def extract_visual_crossing_data():
 
 if __name__ == "__main__":
     # Check if .env file exists
-    if not os.path.exists('.env'):
-        with open('.env', 'a') as f:
+    if not os.path.exists('../.env'):
+        with open('../.env', 'a') as f:
             f.write("# Add your Visual Crossing API key here\n")
             f.write("VISUAL_CROSSING_API_KEY=your_key_here\n")
         print("Created .env file. Please add your Visual Crossing API key.")

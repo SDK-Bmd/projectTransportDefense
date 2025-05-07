@@ -9,7 +9,7 @@ import json
 import requests
 from dotenv import load_dotenv
 from datetime import datetime
-from config import config
+from configuration import config
 
 
 def check_environment():
@@ -31,18 +31,18 @@ def check_environment():
                          "schedule"]
     missing_packages = []
 
-    for package in required_packages:
-        try:
-            __import__(package)
-        except ImportError:
-            missing_packages.append(package)
-
-    if missing_packages:
-        print(f"❌ Missing Python packages: {', '.join(missing_packages)}")
-        print(f"   Install them with: pip install {' '.join(missing_packages)}")
-        return False
-    else:
-        print("✅ All Python dependencies are installed")
+    # for package in required_packages:
+    #     try:
+    #         __import__(package)
+    #     except ImportError:
+    #         missing_packages.append(package)
+    #
+    # if missing_packages:
+    #     print(f"❌ Missing Python packages: {', '.join(missing_packages)}")
+    #     print(f"   Install them with: pip install {' '.join(missing_packages)}")
+    #     return False
+    # else:
+    #     print("✅ All Python dependencies are installed")
 
     # Check API keys in .env or prompt user
     load_dotenv()
@@ -64,7 +64,7 @@ def check_environment():
 
         create_env = input("Do you want to create a .env file now? (y/n): ")
         if create_env.lower() == 'y':
-            with open("../data_extraction/.env", "w") as env_file:
+            with open("../.env", "w") as env_file:
                 for key, description in api_keys.items():
                     value = input(f"Enter API key for {description} ({key}): ")
                     env_file.write(f"{key}={value}\n")

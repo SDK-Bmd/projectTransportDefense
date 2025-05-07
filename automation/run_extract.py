@@ -15,54 +15,55 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from config.config import EXTRACTION_CONFIG
+from configuration.config import EXTRACTION_CONFIG
 
 def run_transport_extraction():
     """Run transport data extraction and processing"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running transport data extraction...")
-    os.system('python data_extraction/extract_transport.py')
-    os.system('python data_processing/process_transport_data.py')
+    os.system('python ../data_extraction/extract_transport.py')
+    os.system('python ../data_processing/process_transport_data.py')
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transport data extraction complete")
-
-def run_navitia_extraction():
-    """Run Navitia data extraction"""
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running Navitia data extraction...")
-    os.system('python data_extraction/extract_navitia_data.py')
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Navitia data extraction complete")
 
 def run_weather_extraction():
     """Run weather data extraction and processing"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running weather data extraction...")
-    os.system('python data_extraction/extract_visual_crossing_weather.py')
-    os.system('python data_processing/process_weather_data.py')
+    os.system('python ../data_extraction/extract_visual_crossing_weather.py')
+    os.system('python ../data_processing/process_weather_data.py')
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weather data extraction complete")
 
 def run_traffic_extraction():
     """Run traffic data extraction"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running traffic data extraction...")
-    os.system('python data_extraction/extract_traffic.py')
+    os.system('python ../data_extraction/extract_traffic.py')
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Traffic data extraction complete")
 
 def run_quality_check():
     """Run basic data quality checks"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running data quality checks...")
-    os.system('python data_processing/data_quality.py')
+    os.system('python ../data_processing/data_quality.py')
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data quality checks complete")
 
 def run_station_extraction():
     """Run station data extraction and processing"""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running station data extraction...")
-    os.system('python data_extraction/extract_ratp_stations.py')
-    os.system('python data_extraction/extract_osm_stations.py')
-    os.system('python data_processing/process_stations_data.py')
+    os.system('python ../data_extraction/extract_ratp_stations.py')
+    os.system('python ../data_extraction/extract_osm_stations.py')
+    os.system('python ../data_processing/process_stations_data.py')
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Station data extraction complete")
+
+def run_idfm_extraction():
+    """Run IDFM data extraction and processing"""
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Running IDFM data extraction...")
+    os.system('python ../data_extraction/extract_idfm_data.py')
+    os.system('python ../data_processing/process_idfm_data.py')
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] IDFM data extraction complete")
 
 def run_all_extractions():
     """Run all data extraction processes"""
     print(f"\n--- Starting complete extraction at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n")
 
     run_transport_extraction()
-    run_navitia_extraction()
+    run_idfm_extraction()
     run_weather_extraction()
     run_traffic_extraction()
     run_station_extraction()

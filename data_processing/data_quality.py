@@ -2,78 +2,53 @@
 Basic data quality monitoring for La Défense mobility data lake
 Performs essential checks on data completeness and structure
 """
-import boto3
 import json
 import logging
 from datetime import datetime
 import os
 import sys
-from botocore.client import Config
 
-# Add parent directory to path for imports
+# Add the parent directory to sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from config import config
+from configuration.config import DATA_LAKE
+from utils.data_lake_utils import check_file_exists, read_json_from_data_lake
 
 # Set up logging
 logging.basicConfig(
-    filename='../data_extraction/data_quality.log',
+    filename=os.path.join(parent_dir, 'data_quality.log'),
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('data_quality')
 
-def get_s3_client():
-    """Create and return an S3 client connected to MinIO"""
-    return boto3.client(
-        's3',
-        endpoint_url=config.DATA_LAKE["endpoint_url"],
-        aws_access_key_id=config.DATA_LAKE["access_key"],
-        aws_secret_access_key=config.DATA_LAKE["secret_key"],
-        config=Config(signature_version='s3v4'),
-        region_name='us-east-1'
-    )
-
-def check_file_exists(bucket, key):
-    """Check if a file exists in the data lake"""
-    s3 = get_s3_client()
-    try:
-        s3.head_object(Bucket=bucket, Key=key)
-        logger.info(f"✅ File exists: {key}")
-        return True
-    except Exception as e:
-        logger.error(f"❌ File missing: {key} - {str(e)}")
-        return False
-
 def check_json_structure(bucket, key, required_fields):
     """Check if a JSON file has the required fields"""
-    s3 = get_s3_client()
-    try:
-        response = s3.get_object(Bucket=bucket, Key=key)
-        content = response['Body'].read().decode('utf-8')
-        data = json.loads(content)
+    data = read_json_from_data_lake(bucket, key)
 
-        missing_fields = []
-        for field in required_fields:
-            if field not in data:
-                missing_fields.append(field)
-
-        if not missing_fields:
-            logger.info(f"✅ JSON structure valid: {key}")
-            return True
-        else:
-            logger.error(f"❌ JSON missing fields: {key} - {', '.join(missing_fields)}")
-            return False
-    except Exception as e:
-        logger.error(f"❌ Error checking JSON: {key} - {str(e)}")
+    if not data:
+        logger.error(f"❌ Error reading JSON: {key}")
         return False
+
+    missing_fields = []
+    for field in required_fields:
+        if field not in data:
+            missing_fields.append(field)
+
+    if not missing_fields:
+        logger.info(f"✅ JSON structure valid: {key}")
+        return True
+    else:
+        logger.error(f"❌ JSON missing fields: {key} - {', '.join(missing_fields)}")
+        return False
+
 
 def run_basic_checks():
     """Run basic quality checks on the data lake"""
-    bucket = config.DATA_LAKE["bucket_name"]
+    bucket = DATA_LAKE["bucket_name"]
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     print(f"Running data quality checks at {timestamp}...")
@@ -94,7 +69,7 @@ def run_basic_checks():
         )
         checks.append(("Weather data structure", weather_structure))
 
-    # Transport data checks
+    # Transport data checks - RATP Source
     transport_types = {
         "metro": "1",
         "rers": "A",
@@ -114,6 +89,25 @@ def run_basic_checks():
             )
             checks.append((f"{transport_type.capitalize()} {line} data structure", transport_structure))
 
+    # IDFM data checks
+    idfm_exists = check_file_exists(bucket, "landing/transport/idfm_ladefense_latest.json")
+    checks.append(("IDFM data exists", idfm_exists))
+
+    if idfm_exists:
+        idfm_structure = check_json_structure(
+            bucket,
+            "landing/transport/idfm_ladefense_latest.json",
+            ["extraction_time", "location", "coordinates", "stops", "departures", "traffic_status"]
+        )
+        checks.append(("IDFM data structure", idfm_structure))
+
+    # Processed IDFM data
+    processed_transport_exists = check_file_exists(bucket, "refined/transport/schedules_latest.parquet")
+    checks.append(("Processed transport schedules exist", processed_transport_exists))
+
+    processed_traffic_exists = check_file_exists(bucket, "refined/transport/traffic_latest.parquet")
+    checks.append(("Processed traffic status exists", processed_traffic_exists))
+
     # Station data checks
     ratp_stations_exists = check_file_exists(bucket, "landing/stations/ratp_stations_latest.json")
     checks.append(("RATP stations data exists", ratp_stations_exists))
@@ -121,7 +115,7 @@ def run_basic_checks():
     osm_stations_exists = check_file_exists(bucket, "landing/stations/osm_enhanced_latest.json")
     checks.append(("OSM stations data exists", osm_stations_exists))
 
-    combined_stations_exists = check_file_exists(bucket, "refined/stations/combined_stations_latest.json")
+    combined_stations_exists = check_file_exists(bucket, "refined/stations/combined_stations_latest.parquet")
     checks.append(("Combined stations data exists", combined_stations_exists))
 
     # Traffic data check

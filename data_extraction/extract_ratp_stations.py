@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 import boto3
 from botocore.client import Config
-from config import config
+from configuration import config
 from api_utils import get_with_retries, API_ENDPOINTS
 
 def get_s3_client():

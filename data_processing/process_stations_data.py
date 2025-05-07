@@ -9,17 +9,18 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime
 import os
-import config
+import configuration
 from botocore.client import Config
+from configuration.config import DATA_LAKE
 
 
 def get_s3_client():
     """Create and return an S3 client connected to MinIO"""
     return boto3.client(
         's3',
-        endpoint_url=config.DATA_LAKE["endpoint_url"],
-        aws_access_key_id=config.DATA_LAKE["access_key"],
-        aws_secret_access_key=config.DATA_LAKE["secret_key"],
+        endpoint_url=DATA_LAKE["endpoint_url"],
+        aws_access_key_id=DATA_LAKE["access_key"],
+        aws_secret_access_key=DATA_LAKE["secret_key"],
         config=Config(signature_version='s3v4'),
         region_name='us-east-1'
     )
@@ -28,7 +29,7 @@ def get_s3_client():
 def process_combined_station_data():
     """Process and combine station data from multiple sources into a unified dataset"""
     s3 = get_s3_client()
-    bucket_name = config.DATA_LAKE["bucket_name"]
+    bucket_name = DATA_LAKE["bucket_name"]
     timestamp = datetime.now().strftime("%Y%m%d")
 
     # Sources to combine (using the latest version of each)

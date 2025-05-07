@@ -15,7 +15,7 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 from utils.data_lake_utils import read_json_from_data_lake, save_parquet_to_data_lake
-from config.config import DATA_LAKE
+from configuration.config import DATA_LAKE
 
 # Set up logging
 logging.basicConfig(

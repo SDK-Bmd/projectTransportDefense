@@ -7,7 +7,7 @@ import os
 import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-from config import config
+from configuration import config
 from api_utils import get_with_retries, API_ENDPOINTS
 
 # Load environment variables

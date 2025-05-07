@@ -101,6 +101,9 @@ API_ENDPOINTS = {
     # Overpass API
     'osm_overpass': 'http://overpass-api.de/api/interpreter',
 
-    # Navitia API (base URL)
-    'navitia_base': 'https://api.navitia.io/v1/'
+    # IDFM API endpoints
+    'idfm_base': 'https://prim.iledefrance-mobilites.fr/marketplace',
+    'idfm_stop_points': 'https://prim.iledefrance-mobilites.fr/marketplace/stop-points',
+    'idfm_stop_monitoring': 'https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring',
+    'idfm_general_message': 'https://prim.iledefrance-mobilites.fr/marketplace/general-message',
 }

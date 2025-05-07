@@ -14,7 +14,7 @@ parent_dir = os.path.dirname(os.path.dirname(current_dir))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from config.config import LADEFENSE_COORDINATES
+from configuration.config import LADEFENSE_COORDINATES
 
 def render_station_map(stations_df):
     """Render a map of stations in La Défense"""
