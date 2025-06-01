@@ -50,77 +50,77 @@ def render_station_map(stations_df):
         st.warning("No station data available to display on the map")
 
 
-def render_traffic_heatmap(traffic_data=None):
-    """Render a heatmap of traffic conditions in La Défense"""
-    st.subheader("Current Traffic Conditions")
-
-    # If no traffic data is provided, generate mock data for demonstration
-    if traffic_data is None or not isinstance(traffic_data, pd.DataFrame):
-        # Generate mock data around La Défense
-        la_defense_lat, la_defense_lon = LADEFENSE_COORDINATES["lat"], LADEFENSE_COORDINATES["lon"]
-
-        # Create a grid of points around La Défense
-        grid_size = 20
-        lat_range = np.linspace(la_defense_lat - 0.01, la_defense_lat + 0.01, grid_size)
-        lon_range = np.linspace(la_defense_lon - 0.015, la_defense_lon + 0.015, grid_size)
-
-        # Generate congestion levels (mock data)
-        np.random.seed(42)  # For reproducibility
-        congestion_pattern = np.random.normal(2, 1, size=(grid_size, grid_size))
-
-        # Add some hotspots
-        for hotspot in [(10, 10), (5, 15)]:
-            i, j = hotspot
-            congestion_pattern[max(0, i - 2):min(grid_size, i + 3), max(0, j - 2):min(grid_size, j + 3)] += 2
-
-        # Clip values to 0-5 range
-        congestion_pattern = np.clip(congestion_pattern, 0, 5)
-
-        # Create points for the heatmap
-        heatmap_data = []
-        for i, lat in enumerate(lat_range):
-            for j, lon in enumerate(lon_range):
-                heatmap_data.append({
-                    'lat': lat,
-                    'lon': lon,
-                    'congestion': congestion_pattern[i, j]
-                })
-
-        traffic_data = pd.DataFrame(heatmap_data)
-
-    # Create the heatmap
-    fig = px.density_mapbox(
-        traffic_data,
-        lat='lat',
-        lon='lon',
-        z='congestion',
-        radius=15,
-        center=dict(lat=LADEFENSE_COORDINATES["lat"], lon=LADEFENSE_COORDINATES["lon"]),
-        zoom=14,
-        mapbox_style="open-street-map",
-        color_continuous_scale=[
-            [0, 'green'],
-            [0.2, 'lime'],
-            [0.4, 'yellow'],
-            [0.6, 'orange'],
-            [0.8, 'red'],
-            [1, 'darkred']
-        ],
-        range_color=[0, 5],
-        title="Traffic Congestion Level"
-    )
-
-    fig.update_layout(height=500)
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Add legend
-    st.write("Congestion levels:")
-    legend_cols = st.columns(6)
-    colors = ['green', 'lime', 'yellow', 'orange', 'red', 'darkred']
-    labels = ["Free flow", "Light", "Moderate", "Heavy", "Very heavy", "Gridlock"]
-
-    for i, (color, label) in enumerate(zip(colors, labels)):
-        legend_cols[i].markdown(
-            f"<div style='background-color: {color}; padding: 10px; text-align: center; border-radius: 5px;'>{label}</div>",
-            unsafe_allow_html=True)
+# def render_traffic_heatmap(traffic_data=None):
+#     """Render a heatmap of traffic conditions in La Défense"""
+#     st.subheader("Current Traffic Conditions")
+#
+#     # If no traffic data is provided, generate mock data for demonstration
+#     if traffic_data is None or not isinstance(traffic_data, pd.DataFrame):
+#         # Generate mock data around La Défense
+#         la_defense_lat, la_defense_lon = LADEFENSE_COORDINATES["lat"], LADEFENSE_COORDINATES["lon"]
+#
+#         # Create a grid of points around La Défense
+#         grid_size = 20
+#         lat_range = np.linspace(la_defense_lat - 0.01, la_defense_lat + 0.01, grid_size)
+#         lon_range = np.linspace(la_defense_lon - 0.015, la_defense_lon + 0.015, grid_size)
+#
+#         # Generate congestion levels (mock data)
+#         np.random.seed(42)  # For reproducibility
+#         congestion_pattern = np.random.normal(2, 1, size=(grid_size, grid_size))
+#
+#         # Add some hotspots
+#         for hotspot in [(10, 10), (5, 15)]:
+#             i, j = hotspot
+#             congestion_pattern[max(0, i - 2):min(grid_size, i + 3), max(0, j - 2):min(grid_size, j + 3)] += 2
+#
+#         # Clip values to 0-5 range
+#         congestion_pattern = np.clip(congestion_pattern, 0, 5)
+#
+#         # Create points for the heatmap
+#         heatmap_data = []
+#         for i, lat in enumerate(lat_range):
+#             for j, lon in enumerate(lon_range):
+#                 heatmap_data.append({
+#                     'lat': lat,
+#                     'lon': lon,
+#                     'congestion': congestion_pattern[i, j]
+#                 })
+#
+#         traffic_data = pd.DataFrame(heatmap_data)
+#
+#     # Create the heatmap
+#     fig = px.density_mapbox(
+#         traffic_data,
+#         lat='lat',
+#         lon='lon',
+#         z='congestion',
+#         radius=15,
+#         center=dict(lat=LADEFENSE_COORDINATES["lat"], lon=LADEFENSE_COORDINATES["lon"]),
+#         zoom=14,
+#         mapbox_style="open-street-map",
+#         color_continuous_scale=[
+#             [0, 'green'],
+#             [0.2, 'lime'],
+#             [0.4, 'yellow'],
+#             [0.6, 'orange'],
+#             [0.8, 'red'],
+#             [1, 'darkred']
+#         ],
+#         range_color=[0, 5],
+#         title="Traffic Congestion Level"
+#     )
+#
+#     fig.update_layout(height=500)
+#
+#     st.plotly_chart(fig, use_container_width=True)
+#
+#     # Add legend
+#     st.write("Congestion levels:")
+#     legend_cols = st.columns(6)
+#     colors = ['green', 'lime', 'yellow', 'orange', 'red', 'darkred']
+#     labels = ["Free flow", "Light", "Moderate", "Heavy", "Very heavy", "Gridlock"]
+#
+#     for i, (color, label) in enumerate(zip(colors, labels)):
+#         legend_cols[i].markdown(
+#             f"<div style='background-color: {color}; padding: 10px; text-align: center; border-radius: 5px;'>{label}</div>",
+#             unsafe_allow_html=True)
