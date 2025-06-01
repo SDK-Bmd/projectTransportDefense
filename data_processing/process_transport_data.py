@@ -1,148 +1,302 @@
 """
 Transport data processing script for La Défense
-Transforms raw transportation data into analysis-ready formats
+Processes raw transport data and saves refined versions
 """
-import boto3
-import json
 import pandas as pd
-from io import BytesIO
+import json
 from datetime import datetime
-from botocore.client import Config
+import sys
+import os
+
+
+from utils.data_lake_utils import get_s3_client, read_json_from_data_lake, save_parquet_to_data_lake, \
+    read_parquet_from_data_lake
 from configuration.config import DATA_LAKE
 
 
-def get_s3_client():
-    """Create and return an S3 client connected to MinIO"""
-    return boto3.client(
-        's3',
-        endpoint_url=DATA_LAKE["endpoint_url"],
-        aws_access_key_id=DATA_LAKE["access_key"],
-        aws_secret_access_key=DATA_LAKE["secret_key"],
-        config=Config(signature_version='s3v4'),
-        region_name='us-east-1'
-    )
+def process_schedules(schedules_data, transport_type, line):
+    """
+    Process schedule data from RATP API response
+
+    Args:
+        schedules_data: Raw schedule data from API
+        transport_type: Type of transport (metro, rers, transilien, buses)
+        line: Line number/letter
+
+    Returns:
+        pd.DataFrame: Processed schedules data
+    """
+    schedules_list = []
+
+    try:
+        # Handle different API response structures
+        if isinstance(schedules_data, dict):
+            # Check for RATP API structure
+            result = schedules_data.get("result", {})
+
+            if "schedules" in result:
+                # RATP API format
+                for schedule in result["schedules"]:
+                    schedule_info = {
+                        "extraction_time": datetime.now().isoformat(),
+                        "transport_type": transport_type,
+                        "line": line,
+                        "station": result.get("station", ""),
+                        "direction": schedule.get("direction", ""),
+                        "destination": schedule.get("destination", ""),
+                        "message": schedule.get("message", ""),
+                        "code": schedule.get("code", "")
+                    }
+                    schedules_list.append(schedule_info)
+
+            # Handle error cases
+            elif "error" in schedules_data:
+                print(f"Error in schedules data for {transport_type} {line}: {schedules_data['error']}")
+                return pd.DataFrame()
+
+        # Convert to DataFrame
+        if schedules_list:
+            return pd.DataFrame(schedules_list)
+        else:
+            # Return empty DataFrame with correct columns if no data
+            return pd.DataFrame(columns=[
+                "extraction_time", "transport_type", "line", "station",
+                "direction", "destination", "message", "code"
+            ])
+
+    except Exception as e:
+        print(f"Error processing schedules for {transport_type} {line}: {str(e)}")
+        return pd.DataFrame()
+
+
+def process_traffic_status(traffic_data, transport_type, line):
+    """
+    Process traffic status data from RATP API response
+
+    Args:
+        traffic_data: Raw traffic data from API
+        transport_type: Type of transport (metro, rers, transilien, buses)
+        line: Line number/letter
+
+    Returns:
+        pd.DataFrame: Processed traffic status data
+    """
+    traffic_list = []
+
+    try:
+        # Handle different API response structures
+        if isinstance(traffic_data, dict):
+            # Check for RATP API structure
+            result = traffic_data.get("result", {})
+
+            if "line" in result and "slug" in result:
+                # RATP API format - single line status
+                traffic_info = {
+                    "extraction_time": datetime.now().isoformat(),
+                    "transport_type": transport_type,
+                    "line": line,
+                    "slug": result.get("slug", ""),
+                    "title": result.get("title", ""),
+                    "message": result.get("message", ""),
+                    "status": determine_status_from_message(result.get("message", ""))
+                }
+                traffic_list.append(traffic_info)
+
+            # Handle multiple traffic reports
+            elif isinstance(result, list):
+                for traffic_item in result:
+                    traffic_info = {
+                        "extraction_time": datetime.now().isoformat(),
+                        "transport_type": transport_type,
+                        "line": line,
+                        "slug": traffic_item.get("slug", ""),
+                        "title": traffic_item.get("title", ""),
+                        "message": traffic_item.get("message", ""),
+                        "status": determine_status_from_message(traffic_item.get("message", ""))
+                    }
+                    traffic_list.append(traffic_info)
+
+            # Handle error cases
+            elif "error" in traffic_data:
+                print(f"Error in traffic data for {transport_type} {line}: {traffic_data['error']}")
+                return pd.DataFrame()
+
+        # Convert to DataFrame
+        if traffic_list:
+            return pd.DataFrame(traffic_list)
+        else:
+            # Return empty DataFrame with correct columns if no data
+            return pd.DataFrame(columns=[
+                "extraction_time", "transport_type", "line", "slug",
+                "title", "message", "status"
+            ])
+
+    except Exception as e:
+        print(f"Error processing traffic status for {transport_type} {line}: {str(e)}")
+        return pd.DataFrame()
+
+
+def determine_status_from_message(message):
+    """
+    Determine traffic status based on message content
+
+    Args:
+        message: Traffic message string
+
+    Returns:
+        str: Status level (normal, minor, major, critical)
+    """
+    if not message:
+        return "unknown"
+
+    message_lower = message.lower()
+
+    # Define keywords for different status levels
+    critical_keywords = ["interrompu", "fermé", "suspendu", "bloqué", "arrêt total"]
+    major_keywords = ["perturbé", "retard important", "ralenti", "incident"]
+    minor_keywords = ["retard", "léger ralentissement", "travaux"]
+    normal_keywords = ["normal", "reprise", "rétabli"]
+
+    # Check for critical issues
+    if any(keyword in message_lower for keyword in critical_keywords):
+        return "critical"
+
+    # Check for major issues
+    elif any(keyword in message_lower for keyword in major_keywords):
+        return "major"
+
+    # Check for minor issues
+    elif any(keyword in message_lower for keyword in minor_keywords):
+        return "minor"
+
+    # Check for normal service
+    elif any(keyword in message_lower for keyword in normal_keywords):
+        return "normal"
+
+    # Default to normal if no keywords match
+    else:
+        return "normal"
+
+
+def combine_all_transport_data():
+    """
+    Combine all processed transport data into unified datasets
+    """
+    bucket_name = DATA_LAKE["bucket_name"]
+
+    all_schedules = []
+    all_traffic = []
+
+    # Define all transport types and lines
+    transport_config = {
+        "metro": ["1"],
+        "rers": ["A", "E"],
+        "transilien": ["L"],
+        "buses": ["73", "144", "158", "163", "174", "178", "258", "262", "272", "275"]
+    }
+
+    for transport_type, lines in transport_config.items():
+        for line in lines:
+            try:
+                # Load schedules
+                schedules_key = f'refined/transport/{transport_type}_{line}_schedules_latest.parquet'
+                line_schedules = read_parquet_from_data_lake(bucket_name, schedules_key)
+                if not line_schedules.empty:
+                    all_schedules.append(line_schedules)
+
+                # Load traffic status
+                traffic_key = f'refined/transport/{transport_type}_{line}_traffic_latest.parquet'
+                line_traffic = read_parquet_from_data_lake(bucket_name, traffic_key)
+                if not line_traffic.empty:
+                    all_traffic.append(line_traffic)
+
+            except Exception as e:
+                print(f"Could not load data for {transport_type} {line}: {str(e)}")
+                continue
+
+    # Combine all data
+    if all_schedules:
+        combined_schedules = pd.concat(all_schedules, ignore_index=True)
+        save_parquet_to_data_lake(
+            bucket_name,
+            "refined/transport/schedules_latest.parquet",
+            combined_schedules
+        )
+        print(f"Combined schedules saved: {len(combined_schedules)} records")
+
+    if all_traffic:
+        combined_traffic = pd.concat(all_traffic, ignore_index=True)
+        save_parquet_to_data_lake(
+            bucket_name,
+            "refined/transport/traffic_latest.parquet",
+            combined_traffic
+        )
+        print(f"Combined traffic status saved: {len(combined_traffic)} records")
 
 
 def process_transport_data():
-    """Process transportation data from the landing zone"""
-    s3 = get_s3_client()
+    """Process transport data for all transport types"""
     bucket_name = DATA_LAKE["bucket_name"]
 
-    # Get the latest data for each transport type
-    transport_types = {
-        "metro_1": "landing/transport/metro_1_latest.json",
-        "rer_A": "landing/transport/rers_A_latest.json",
-        "tram_2": "landing/transport/tramways_2_latest.json"
+    # Define all transport types and lines (updated with new ones)
+    transport_config = {
+        "metro": ["1"],
+        "rers": ["A", "E"],  # Added E
+        "transilien": ["L"],  # NEW
+        "buses": ["73", "144", "158", "163", "174", "178", "258", "262", "272", "275"]  # NEW
     }
 
-    schedules_data = []
-    traffic_data = []
+    print("Processing transport data for all lines...")
 
-    # Process each transport type
-    for transport_name, file_key in transport_types.items():
-        try:
-            # Get the data
-            response = s3.get_object(Bucket=bucket_name, Key=file_key)
-            content = response['Body'].read().decode('utf-8')
-            data = json.loads(content)
+    for transport_type, lines in transport_config.items():
+        print(f"Processing {transport_type} lines: {', '.join(lines)}")
 
-            # Extract transport type information
-            transport_type = data.get("transport_type", "")
-            line = data.get("line", "")
-            station = data.get("station", "")
-            extraction_time = data.get("extraction_time", "")
+        for line in lines:
+            try:
+                # Read raw data
+                latest_key = f"landing/transport/{transport_type}_{line}_latest.json"
+                data = read_json_from_data_lake(bucket_name, latest_key)
 
-            # Process schedules data
-            if "schedules" in data and "result" in data["schedules"]:
-                for direction in data["schedules"]["result"].get("schedules", []):
-                    direction_name = direction.get("destination", "")
-                    for schedule in direction.get("schedules", []):
-                        schedule_entry = {
-                            "extraction_time": extraction_time,
-                            "transport_type": transport_type,
-                            "line": line,
-                            "station": station.replace("+", " "),
-                            "direction": direction_name,
-                            "message": schedule.get("message", ""),
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        }
-                        schedules_data.append(schedule_entry)
+                if data:
+                    print(f"Processing {transport_type} {line}...")
 
-            # Process traffic data
-            if "traffic" in data and "result" in data["traffic"]:
-                traffic_info = data["traffic"]["result"]
-                traffic_entry = {
-                    "extraction_time": extraction_time,
-                    "transport_type": transport_type,
-                    "line": line,
-                    "title": traffic_info.get("title", ""),
-                    "message": traffic_info.get("message", ""),
-                    "status": traffic_info.get("slug", ""),
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                traffic_data.append(traffic_entry)
+                    # Process schedules
+                    schedules_df = process_schedules(
+                        data.get("schedules", {}),
+                        transport_type,
+                        line
+                    )
 
-            print(f"Processed {transport_name} data")
+                    # Process traffic status
+                    traffic_df = process_traffic_status(
+                        data.get("traffic", {}),
+                        transport_type,
+                        line
+                    )
 
-        except Exception as e:
-            print(f"Error processing {transport_name}: {str(e)}")
+                    # Save processed data
+                    if not schedules_df.empty:
+                        schedules_key = f"refined/transport/{transport_type}_{line}_schedules_latest.parquet"
+                        save_parquet_to_data_lake(bucket_name, schedules_key, schedules_df)
+                        print(f"  Saved {len(schedules_df)} schedule records")
 
-    # Create DataFrames
-    schedules_df = pd.DataFrame(schedules_data)
-    traffic_df = pd.DataFrame(traffic_data)
+                    if not traffic_df.empty:
+                        traffic_key = f"refined/transport/{transport_type}_{line}_traffic_latest.parquet"
+                        save_parquet_to_data_lake(bucket_name, traffic_key, traffic_df)
+                        print(f"  Saved {len(traffic_df)} traffic status records")
 
-    # Save to refined zone
-    timestamp = datetime.now().strftime("%Y%m%d")
+                else:
+                    print(f"No data found for {transport_type} {line}")
 
-    # Save schedules
-    if not schedules_df.empty:
-        schedules_bytes = BytesIO()
-        schedules_df.to_parquet(schedules_bytes)
-        schedules_key = f"refined/transport/schedules_{timestamp}.parquet"
-        s3.put_object(
-            Bucket=bucket_name,
-            Key=schedules_key,
-            Body=schedules_bytes.getvalue()
-        )
+            except Exception as e:
+                print(f"Error processing {transport_type} {line}: {str(e)}")
+                continue
 
-        # Also save latest
-        latest_schedules_bytes = BytesIO()
-        schedules_df.to_parquet(latest_schedules_bytes)
-        s3.put_object(
-            Bucket=bucket_name,
-            Key="refined/transport/schedules_latest.parquet",
-            Body=latest_schedules_bytes.getvalue()
-        )
+    # Combine all processed data
+    print("Combining all transport data...")
+    combine_all_transport_data()
 
-        print(f"Saved {len(schedules_df)} schedule entries to {schedules_key}")
-    else:
-        print("No schedule data to save")
-
-    # Save traffic
-    if not traffic_df.empty:
-        traffic_bytes = BytesIO()
-        traffic_df.to_parquet(traffic_bytes)
-        traffic_key = f"refined/transport/traffic_{timestamp}.parquet"
-        s3.put_object(
-            Bucket=bucket_name,
-            Key=traffic_key,
-            Body=traffic_bytes.getvalue()
-        )
-
-        # Also save latest
-        latest_traffic_bytes = BytesIO()
-        traffic_df.to_parquet(latest_traffic_bytes)
-        s3.put_object(
-            Bucket=bucket_name,
-            Key="refined/transport/traffic_latest.parquet",
-            Body=latest_traffic_bytes.getvalue()
-        )
-
-        print(f"Saved {len(traffic_df)} traffic entries to {traffic_key}")
-    else:
-        print("No traffic data to save")
-
-    return True
+    print("Transport data processing completed!")
 
 
 if __name__ == "__main__":
