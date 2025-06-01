@@ -82,6 +82,21 @@ API_ENDPOINTS = {
     'ratp_metro_line1': 'https://api-ratp.pierre-grimaud.fr/v4/stations/metros/1',
     'ratp_rer_lineA': 'https://api-ratp.pierre-grimaud.fr/v4/stations/rers/A',
     'ratp_tram_line2': 'https://api-ratp.pierre-grimaud.fr/v4/stations/tramways/2',
+    'ratp_rer_lineE': 'https://api-ratp.pierre-grimaud.fr/v4/stations/rers/E',
+    'ratp_transilien_lineL': 'https://api-ratp.pierre-grimaud.fr/v4/stations/transilien/L',
+
+# Bus lines (major ones serving La Défense)
+    'ratp_bus_line73': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/73',
+    'ratp_bus_line144': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/144',
+    'ratp_bus_line158': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/158',
+    'ratp_bus_line163': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/163',
+    'ratp_bus_line174': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/174',
+    'ratp_bus_line178': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/178',
+    'ratp_bus_line258': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/258',
+    'ratp_bus_line262': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/262',
+    'ratp_bus_line272': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/272',
+    'ratp_bus_line275': 'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/275',
+
 
     # RATP schedules (replace {type}, {line}, {station} in code)
     'ratp_schedules': 'https://api-ratp.pierre-grimaud.fr/v4/schedules/{type}/{line}/{station}/A+R',
@@ -106,4 +121,22 @@ API_ENDPOINTS = {
     'idfm_stop_points': 'https://prim.iledefrance-mobilites.fr/marketplace/stop-points',
     'idfm_stop_monitoring': 'https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring',
     'idfm_general_message': 'https://prim.iledefrance-mobilites.fr/marketplace/general-message',
+}
+
+# Add bus stops coordinates for La Défense area
+BUS_STOPS_LADEFENSE = {
+    "Grande Arche": {"lat": 48.8924, "lon": 2.2359},
+    "CNIT": {"lat": 48.8916, "lon": 2.2375},
+    "Esplanade de La Défense": {"lat": 48.8897, "lon": 2.2434},
+    "Quatre Temps": {"lat": 48.8911, "lon": 2.2376},
+    "Pont de Neuilly": {"lat": 48.8847, "lon": 2.2594},
+    "Les Bergeries": {"lat": 48.8928, "lon": 2.2289},
+}
+
+# Update transport types
+TRANSPORT_TYPES = {
+    "metro": ["1"],
+    "rers": ["A", "E"],
+    "transilien": ["L"],
+    "buses": ["73", "144", "158", "163", "174", "178", "258", "262", "272", "275"]
 }
