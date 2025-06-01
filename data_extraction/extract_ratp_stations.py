@@ -36,6 +36,9 @@ def extract_ratp_station_data():
     # RATP Endpoints from API_ENDPOINTS
     metro_stations_url = API_ENDPOINTS['ratp_metro_line1']
     rer_stations_url = API_ENDPOINTS['ratp_rer_lineA']
+    rer_e_stations_url = API_ENDPOINTS['ratp_rer_lineE']
+    transilien_l_stations_url = API_ENDPOINTS['ratp_transilien_lineL']
+    bus_lines = ['73', '144', '158', '163', '174', '178', '258', '262', '272', '275']
 
     # Equipment status (elevators/escalators)
     equipment_url = API_ENDPOINTS['ratp_equipment']
@@ -52,8 +55,66 @@ def extract_ratp_station_data():
         "q": "la+defense",
         "rows": 10
     }
-
     try:
+        # Get RER E stations
+        rer_e_response = get_with_retries(rer_e_stations_url, max_retries=3)
+        if rer_e_response and rer_e_response.status_code == 200:
+            rer_e_data = rer_e_response.json()
+            for station in rer_e_data.get("result", {}).get("stations", []):
+                if "defense" in station.get("name", "").lower():
+                    station_info = {
+                        "name": station.get("name", ""),
+                        "id": station.get("id", ""),
+                        "type": "RER",
+                        "line": "E",
+                        "slug": station.get("slug", ""),
+                        "coordinates": {},
+                        "accessibility": {},
+                        "equipment": {}
+                    }
+                    station_data["stations"].append(station_info)
+
+        # Get Transilien L stations
+        transilien_l_response = get_with_retries(transilien_l_stations_url, max_retries=3)
+        if transilien_l_response and transilien_l_response.status_code == 200:
+            transilien_l_data = transilien_l_response.json()
+            for station in transilien_l_data.get("result", {}).get("stations", []):
+                if "defense" in station.get("name", "").lower():
+                    station_info = {
+                        "name": station.get("name", ""),
+                        "id": station.get("id", ""),
+                        "type": "Transilien",
+                        "line": "L",
+                        "slug": station.get("slug", ""),
+                        "coordinates": {},
+                        "accessibility": {},
+                        "equipment": {}
+                    }
+                    station_data["stations"].append(station_info)
+
+        # Get Bus stations
+        for bus_line in bus_lines:
+            bus_url = f'https://api-ratp.pierre-grimaud.fr/v4/stations/buses/{bus_line}'
+            bus_response = get_with_retries(bus_url, max_retries=3)
+
+            if bus_response and bus_response.status_code == 200:
+                bus_data = bus_response.json()
+                for station in bus_data.get("result", {}).get("stations", []):
+                    # Check if station is in La Défense area
+                    if any(keyword in station.get("name", "").lower()
+                           for keyword in ["defense", "grande arche", "cnit", "esplanade", "quatre temps"]):
+                        station_info = {
+                            "name": station.get("name", ""),
+                            "id": station.get("id", ""),
+                            "type": "Bus",
+                            "line": bus_line,
+                            "slug": station.get("slug", ""),
+                            "coordinates": {},
+                            "accessibility": {},
+                            "equipment": {}
+                        }
+                        station_data["stations"].append(station_info)
+
         # Get Metro Line 1 stations with retry logic
         metro_response = get_with_retries(metro_stations_url, max_retries=3)
 

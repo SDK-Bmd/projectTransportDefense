@@ -26,11 +26,30 @@ def extract_ratp_transport_data():
     bucket_name = config.DATA_LAKE["bucket_name"]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Stations at La Défense
+    # EXPANDED STATIONS CONFIGURATION
     stations = {
-        "metro": [{"line": "1", "station": "la+defense"}],
-        "tramways": [{"line": "2", "station": "la+defense"}],
-        "rers": [{"line": "A", "station": "la+defense"}]
+        "metro": [
+            {"line": "1", "station": "la+defense"}
+        ],
+        "rers": [
+            {"line": "A", "station": "la+defense"},
+            {"line": "E", "station": "la+defense"}  # NEW
+        ],
+        "transilien": [
+            {"line": "L", "station": "la+defense"}  # NEW
+        ],
+        "buses": [  # NEW SECTION
+            {"line": "73", "station": "grande+arche"},
+            {"line": "144", "station": "la+defense"},
+            {"line": "158", "station": "esplanade+de+la+defense"},
+            {"line": "163", "station": "cnit"},
+            {"line": "174", "station": "la+defense"},
+            {"line": "178", "station": "quatre+temps"},
+            {"line": "258", "station": "pont+de+neuilly"},
+            {"line": "262", "station": "la+defense"},
+            {"line": "272", "station": "les+bergeries"},
+            {"line": "275", "station": "la+defense"}
+        ]
     }
 
     # Extract data by transport type
