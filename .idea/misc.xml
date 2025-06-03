@@ -3,4 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.11 (project _transport_la_defense)" />
   </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 (project _transport_la_defense)" project-jdk-type="Python SDK" />
 </project>

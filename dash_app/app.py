@@ -52,6 +52,40 @@ def load_weather_data():
         st.error(f"Error loading weather data: {str(e)}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+@st.cache_data(ttl=900)  # Cache for 15 minutes
+def load_predictions():
+    """Load real-time predictions for all transport lines"""
+    try:
+        from models.enhanced_prediction_model import PredictionService
+
+        service = PredictionService()
+        if not service.initialize():
+            return {}
+
+        # Get predictions for all lines
+        lines_to_predict = [
+            {"transport_type": "metro", "line": "1"},
+            {"transport_type": "rers", "line": "A"},
+            {"transport_type": "rers", "line": "E"},
+            {"transport_type": "transilien", "line": "L"},
+            {"transport_type": "buses", "line": "144"},
+        ]
+
+        predictions = {}
+        for line_info in lines_to_predict:
+            key = f"{line_info['transport_type']}_{line_info['line']}"
+            prediction = service.get_transport_prediction(
+                line_info['transport_type'],
+                line_info['line']
+            )
+            if prediction:
+                predictions[key] = prediction
+
+        return predictions
+
+    except Exception as e:
+        st.error(f"Error loading predictions: {str(e)}")
+        return {}
 
 @st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates for transport)
 def load_transport_data():
@@ -1110,11 +1144,9 @@ elif page == "Predictions":
             st.info("No transport status data available for reliability predictions")
 
     with pred_tab4:
-        st.write("Predicted congestion zones in La Défense")
-        # render_traffic_heatmap()
+        st.write("Traffic hotspots and congestion information for La Défense area")
 
-        # Additional congestion insights
-        # st.subheader("🚨 Congestion Hotspots")
+        # Traffic hotspots information
         st.subheader("🚨 Known Congestion Areas")
 
         congestion_zones = [
@@ -1122,58 +1154,157 @@ elif page == "Predictions":
                 "zone": "Grande Arche Area",
                 "peak_hours": "8:00-9:30, 18:00-19:30",
                 "congestion_level": "High",
-                "recommendation": "Use RER E instead of RER A during peak"
+                "recommendation": "Use RER E instead of RER A during peak hours",
+                "description": "Heavy pedestrian and vehicle traffic around the iconic Grande Arche monument"
             },
             {
                 "zone": "CNIT Complex",
                 "peak_hours": "12:00-14:00, 18:00-20:00",
                 "congestion_level": "Moderate",
-                "recommendation": "Bus 144 provides good alternative"
+                "recommendation": "Bus 144 provides good alternative routing",
+                "description": "Business district with conference center generates midday and evening peaks"
             },
             {
                 "zone": "Quatre Temps",
                 "peak_hours": "11:00-13:00, 17:00-19:00",
                 "congestion_level": "Moderate",
-                "recommendation": "Walking connections available"
+                "recommendation": "Use covered walkways for pedestrian access",
+                "description": "Major shopping center creates consistent foot traffic and delivery congestion"
             },
             {
                 "zone": "Pont de Neuilly",
                 "peak_hours": "7:30-9:00, 17:30-19:00",
                 "congestion_level": "Very High",
-                "recommendation": "Avoid during rush hours"
+                "recommendation": "Avoid during rush hours - use public transport",
+                "description": "Critical bridge connection experiences severe rush hour bottlenecks"
             }
         ]
 
-        # Display in columns
-        cols = st.columns(2)
+        # Display in a 2x2 grid using Streamlit columns
+        col1, col2 = st.columns(2)
+
         for i, zone in enumerate(congestion_zones):
-            with cols[i % 2]:
-                level_colors = {
-                    "Low": "#28a745",
-                    "Moderate": "#ffc107",
-                    "High": "#fd7e14",
-                    "Very High": "#dc3545"
-                }
+            # Alternate between columns
+            current_col = col1 if i % 2 == 0 else col2
 
-                color = level_colors.get(zone["congestion_level"], "#6c757d")
+            with current_col:
+                # Create a container for each zone
+                with st.container():
+                    # Header with emoji and zone name
+                    if zone["congestion_level"] == "Very High":
+                        st.error(f"📍 **{zone['zone']}** - {zone['congestion_level']} Congestion")
+                    elif zone["congestion_level"] == "High":
+                        st.warning(f"📍 **{zone['zone']}** - {zone['congestion_level']} Congestion")
+                    else:
+                        st.info(f"📍 **{zone['zone']}** - {zone['congestion_level']} Congestion")
 
-                st.markdown(f"""
-                    <div style="
-                        border: 2px solid {color};
-                        border-radius: 8px;
-                        padding: 15px;
-                        margin: 10px 0;
-                        background-color: #f8f9fa;
-                    ">
-                        <h4 style="color: {color}; margin-top: 0;">
-                            📍 {zone['zone']}
-                        </h4>
-                        <p><strong>Level:</strong> {zone['congestion_level']}</p>
-                        <p><strong>Peak:</strong> {zone['peak_hours']}</p>
-                        <p><strong>Tip:</strong> {zone['recommendation']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # Zone details in a clean format
+                    st.write(f"**⏰ Peak Hours:** {zone['peak_hours']}")
+                    st.write(f"**📝 Description:** {zone['description']}")
+                    st.success(f"💡 **Tip:** {zone['recommendation']}")
 
+                    # Add some spacing
+                    st.write("")
+
+        # Additional traffic insights
+        st.markdown("---")
+        st.subheader("📊 Traffic Insights & Tips")
+
+        # Create insight cards using Streamlit columns
+        insight_col1, insight_col2, insight_col3, insight_col4 = st.columns(4)
+
+        with insight_col1:
+            st.info("""
+            **🕐 Best Travel Times**
+
+            Avoid 8:00-9:30 AM and 6:00-7:30 PM for optimal traffic conditions
+            """)
+
+        with insight_col2:
+            st.info("""
+            **🚇 Public Transport Priority**
+
+            Metro Line 1 and RER A/E provide the most reliable alternatives during peak hours
+            """)
+
+        with insight_col3:
+            st.info("""
+            **🚶‍♂️ Pedestrian Networks**
+
+            Underground and covered walkways connect major buildings safely
+            """)
+
+        with insight_col4:
+            st.info("""
+            **📱 Real-time Updates**
+
+            Check transport apps before traveling for live disruption information
+            """)
+
+        # Traffic prediction summary
+        st.markdown("---")
+        st.subheader("🔮 Traffic Predictions Summary")
+
+        # Use expander for detailed predictions
+        with st.expander("View Detailed Predictions", expanded=True):
+            prediction_col1, prediction_col2 = st.columns(2)
+
+            with prediction_col1:
+                st.markdown("**🌅 Morning Period**")
+                st.error(
+                    "**Morning Rush (8:00-9:30):** Heavy congestion expected around Grande Arche and Pont de Neuilly")
+                st.warning("**Mid-Morning (9:30-11:00):** Moderate traffic flow, good travel window")
+
+            with prediction_col2:
+                st.markdown("**🌆 Afternoon/Evening Period**")
+                st.warning("**Lunch Time (12:00-14:00):** Moderate congestion around business districts and CNIT")
+                st.error("**Evening Rush (18:00-19:30):** Peak congestion across all major zones")
+
+        # Additional recommendations
+        st.success("""
+        **🎯 Smart Travel Recommendations:**
+        - Use Metro Line 1 for fastest connections during any hour
+        - RER E is less crowded than RER A during peak times  
+        - Consider walking through Les Quatre Temps for weather protection
+        - Bus 144 provides good local circulation around La Défense
+        """)
+        # Additional traffic insights
+        st.markdown("---")
+        st.subheader("📊 Traffic Insights & Tips")
+
+        # Create insight cards
+        insights = [
+            {
+                "icon": "🕐",
+                "title": "Best Travel Times",
+                "content": "Avoid 8:00-9:30 AM and 6:00-7:30 PM for optimal traffic conditions"
+            },
+            {
+                "icon": "🚇",
+                "title": "Public Transport Priority",
+                "content": "Metro Line 1 and RER A/E provide the most reliable alternatives during peak hours"
+            },
+            {
+                "icon": "🚶‍♂️",
+                "title": "Pedestrian Networks",
+                "content": "Underground and covered walkways connect major buildings safely"
+            },
+            {
+                "icon": "📱",
+                "title": "Real-time Updates",
+                "content": "Check transport apps before traveling for live disruption information"
+            }
+        ]
+
+        # Traffic prediction summary
+        st.markdown("---")
+        st.info("""
+        **🔮 Traffic Predictions Summary:**
+        - **Morning Rush (8:00-9:30)**: Heavy congestion expected around Grande Arche and Pont de Neuilly
+        - **Lunch Time (12:00-14:00)**: Moderate congestion around business districts and CNIT
+        - **Evening Rush (18:00-19:30)**: Peak congestion across all major zones
+        - **Off-Peak Hours**: Generally smooth traffic flow with occasional delays near shopping areas
+        """)
 # Footer
 st.markdown("---")
 footer_col1, footer_col2, footer_col3 = st.columns(3)
