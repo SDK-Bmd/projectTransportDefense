@@ -1,15 +1,20 @@
-"""
-Streamlit dashboard for La Défense mobility visualization with predictive features
-Updated to support Metro, RER A/E, Transilien L, and multiple bus lines
-"""
-import streamlit as st
-import pandas as pd
-import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
+
+import pandas as pd
+
 from datetime import datetime, timedelta
-import json
-import io
+
+import streamlit as st
+
+from enhanced_dashboard_transport import create_transport_dashboard_section, render_enhanced_schedule_summary
+
+from utils.cache_integration import add_enhanced_cache_management_sidebar, calculate_routes_cached_with_time_fix
+
+try:
+    from models.enhanced_prediction_model import PredictionService
+    PREDICTIONS_AVAILABLE = True
+except ImportError:
+    PREDICTIONS_AVAILABLE = False
 import sys
 import os
 
@@ -20,16 +25,74 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 # Import project modules
-from configuration.config import DATA_LAKE, LADEFENSE_COORDINATES
-from utils.data_lake_utils import get_s3_client, read_parquet_from_data_lake, read_json_from_data_lake
+from configuration.config import DATA_LAKE
+from utils.data_lake_utils import read_parquet_from_data_lake, read_json_from_data_lake
 from dash_app.components.maps import render_station_map
 from dash_app.components.weather import render_weather_section
 from dash_app.components.transport import (
-    render_transport_status, render_schedules, render_schedule_summary,
-    render_transport_usage_chart, render_line_performance_metrics
+    render_transport_status, render_schedules, render_transport_usage_chart, render_line_performance_metrics
 )
-from dash_app.components.stations import render_station_details, render_accessibility_overview
+from dash_app.components.stations import render_station_details
 
+
+def reset_route_planner_state():
+    """Reset route planner session state - call this if you need to clear everything"""
+    keys_to_reset = [
+        'route_departure_time', 'route_origin', 'route_destination',
+        'route_transport_modes', 'route_preferences', 'route_journey_type',
+        'route_accessibility', 'route_eco_friendly'
+    ]
+
+    for key in keys_to_reset:
+        if key in st.session_state:
+            del st.session_state[key]
+
+def add_route_planner_reset_button():
+    """Add this to your sidebar to allow users to reset route planner state"""
+    if st.sidebar.button("🔄 Reset Route Planner", help="Clear all route planner selections"):
+        reset_route_planner_state()
+        st.rerun()
+
+def initialize_route_planner_state():
+    """Initialize session state for route planner if not already set"""
+    if 'route_departure_time' not in st.session_state:
+        st.session_state.route_departure_time = datetime.now().time()
+
+    if 'route_origin' not in st.session_state:
+        st.session_state.route_origin = "La Défense Grande Arche"
+
+    if 'route_destination' not in st.session_state:
+        st.session_state.route_destination = None
+
+    if 'route_transport_modes' not in st.session_state:
+        st.session_state.route_transport_modes = ["Metro", "RER", "Bus"]
+
+    if 'route_preferences' not in st.session_state:
+        st.session_state.route_preferences = {
+            'time_pref': 1.0,
+            'transfer_pref': 0.3,
+            'comfort_pref': 0.5,
+            'cost_pref': 0.2
+        }
+
+    if 'route_journey_type' not in st.session_state:
+        st.session_state.route_journey_type = "Now"
+
+    if 'route_accessibility' not in st.session_state:
+        st.session_state.route_accessibility = False
+
+    if 'route_eco_friendly' not in st.session_state:
+        st.session_state.route_eco_friendly = False
+
+def safe_get_weather_value(current_data, key, default=0):
+    """Safely extract weather values with None handling"""
+    value = current_data.get(key, default)
+    if value is None or value == "" or str(value).lower() in ['none', 'nan', 'null', 'n/a']:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
 
 # Load data functions
 @st.cache_data(ttl=3600)  # Cache for 1 hour
@@ -85,6 +148,41 @@ def load_predictions():
 
     except Exception as e:
         st.error(f"Error loading predictions: {str(e)}")
+        return {}
+
+
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def load_24h_forecasts():
+    """Load 24-hour forecasts for key transport lines"""
+    if not PREDICTIONS_AVAILABLE:
+        return {}
+
+    try:
+        service = PredictionService()
+        if not service.initialize():
+            return {}
+
+        # Get 24h forecasts for main lines
+        main_lines = [
+            {"transport_type": "metro", "line": "1"},
+            {"transport_type": "rers", "line": "A"},
+            {"transport_type": "rers", "line": "E"},
+        ]
+
+        forecasts = {}
+        for line_info in main_lines:
+            key = f"{line_info['transport_type']}_{line_info['line']}"
+            forecast = service.get_24h_forecast(
+                line_info['transport_type'],
+                line_info['line']
+            )
+            if not forecast.empty:
+                forecasts[key] = forecast
+
+        return forecasts
+
+    except Exception as e:
+        st.error(f"Error loading forecasts: {str(e)}")
         return {}
 
 @st.cache_data(ttl=1800)  # Cache for 30 minutes (more frequent updates for transport)
@@ -159,6 +257,23 @@ def load_transport_data():
     # Combine all data
     schedules_df = pd.concat(all_schedules, ignore_index=True) if all_schedules else pd.DataFrame()
     traffic_df = pd.concat(all_traffic, ignore_index=True) if all_traffic else pd.DataFrame()
+
+    try:
+        # Try to load existing data
+        schedules_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/schedules_latest.parquet')
+        traffic_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/traffic_latest.parquet')
+
+        # If empty, try RATP fallback
+        if schedules_df.empty:
+            schedules_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/ratp_schedules_latest.parquet')
+        if traffic_df.empty:
+            traffic_df = read_parquet_from_data_lake(bucket_name, 'refined/transport/ratp_traffic_latest.parquet')
+
+        return schedules_df, traffic_df
+
+    except Exception as e:
+        st.error(f"Error loading transport data: {str(e)}")
+        return pd.DataFrame(), pd.DataFrame()
 
     # Data source indicator
     if not schedules_df.empty or not traffic_df.empty:
@@ -279,6 +394,10 @@ def load_all_data():
         quality_status = load_data_quality_status()
         idfm_data = load_idfm_data()
 
+        # Add predictions to data loading
+        predictions = load_predictions()
+        forecasts = load_24h_forecasts()
+
         return {
             "current_weather": current_weather,
             "daily_weather": daily_weather,
@@ -288,9 +407,10 @@ def load_all_data():
             "stations": stations_df,
             "road_traffic": road_traffic_data,
             "quality_status": quality_status,
-            "idfm_raw": idfm_data
+            "idfm_raw": idfm_data,
+            "predictions": predictions,  # NEW
+            "forecasts": forecasts  # NEW
         }
-
 
 # Page configuration
 st.set_page_config(
@@ -304,6 +424,8 @@ st.set_page_config(
 st.sidebar.title("🏢 La Défense Mobility")
 st.sidebar.markdown("---")
 
+add_enhanced_cache_management_sidebar()
+
 page = st.sidebar.selectbox(
     "Choose a page",
     ["Overview", "Route Planner", "Weather Impact", "Transport Analysis", "Station Information", "Data Quality", "Predictions"]
@@ -313,6 +435,15 @@ page = st.sidebar.selectbox(
 st.sidebar.markdown("### 📊 Data Sources")
 data_source = st.sidebar.empty()
 
+# Load the data
+all_data = load_all_data()
+
+
+if st.sidebar.button("🔄 Reset Route Planner", help="Clear all route planner selections"):
+    reset_route_planner_state()
+    st.rerun()
+    add_route_planner_reset_button()
+
 # Transport lines coverage
 st.sidebar.markdown("### 🚊 Lines Covered")
 st.sidebar.markdown("""
@@ -321,9 +452,17 @@ st.sidebar.markdown("""
 **Transilien**: L  
 **Bus**: 73, 144, 158, 163, 174, 178, 258, 262, 272, 275
 """)
+st.sidebar.markdown("### 🔮 Prediction Status")
+try:
+    predictions = all_data.get("predictions", {})
+    if PREDICTIONS_AVAILABLE and predictions:
+        st.sidebar.success(f"✅ Active ({len(predictions)} lines)")
+    else:
+        st.sidebar.error("❌ Not available")
+except:
+    st.sidebar.error("❌ Not available")
 
 # Last refresh time
-st.sidebar.markdown("---")
 refresh_time = datetime.now().strftime("%Y-%m-%d %H:%M")
 st.sidebar.write(f"🔄 Last refresh: {refresh_time}")
 
@@ -331,9 +470,6 @@ st.sidebar.write(f"🔄 Last refresh: {refresh_time}")
 if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
-
-# Load the data
-all_data = load_all_data()
 
 # Determine and display data source
 transport_data_available = not all_data["schedules"].empty or not all_data["traffic_status"].empty
@@ -352,24 +488,6 @@ current_time = datetime.now().strftime("%H:%M:%S")
 if page == "Overview":
     st.title("🏢 La Défense Mobility Dashboard")
     st.subheader(f"Current Status as of {current_date} {current_time}")
-
-    # Data quality indicator
-    quality = all_data["quality_status"]
-    quality_color = "green" if quality.get("status") == "Good" else "orange" if quality.get(
-        "status") == "Issues Detected" else "gray"
-
-    st.markdown(f"""
-    <div style="
-        padding: 8px 16px; 
-        border-radius: 8px; 
-        background-color: {quality_color}; 
-        color: white;
-        display: inline-block;
-        margin-bottom: 20px;
-        font-weight: bold;">
-        🔍 Data Quality: {quality.get("status", "Unknown")}
-    </div>
-    """, unsafe_allow_html=True)
 
     # Enhanced summary metrics
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -403,17 +521,22 @@ if page == "Overview":
             st.metric("🚊 Transport Lines", "N/A")
 
     with col3:
-        if not all_data["schedules"].empty:
-            # Count unique transport types
-            transport_types = all_data["schedules"]["transport_type"].nunique()
-            next_departures = len(all_data["schedules"])
-            st.metric(
-                "📅 Departures",
-                f"{next_departures} scheduled",
-                f"{transport_types} transport types"
-            )
+        # Real reliability prediction
+        predictions = all_data.get("predictions", {})
+        if predictions:
+            # Calculate average reliability across all lines
+            reliabilities = [pred.get('reliability', 0) for pred in predictions.values() if 'reliability' in pred]
+            if reliabilities:
+                avg_reliability = sum(reliabilities) / len(reliabilities)
+                st.metric(
+                    "🔮 Avg Reliability",
+                    f"{avg_reliability:.1%}",
+                    f"{len(reliabilities)} lines predicted"
+                )
+            else:
+                st.metric("🔮 Avg Reliability", "N/A")
         else:
-            st.metric("📅 Departures", "N/A")
+            st.metric("🔮 Predictions", "Not available")
 
     with col4:
         if not all_data["stations"].empty:
@@ -431,12 +554,13 @@ if page == "Overview":
             st.metric("🚉 Stations", "N/A")
 
     with col5:
-        if "tomtom_flow" in all_data["road_traffic"]:
+        # Prediction freshness indicator
+        if predictions:
+            st.metric("🔄 Status", "Live ML", "Real-time predictions")
+        elif "tomtom_flow" in all_data["road_traffic"]:
             st.metric("🚗 Road Traffic", "Live data", "TomTom")
-        elif all_data["road_traffic"]:
-            st.metric("🚗 Road Traffic", "Available", "Multiple sources")
         else:
-            st.metric("🚗 Road Traffic", "N/A")
+            st.metric("🚗 Data Status", "Static", "No real-time")
 
     # Map of La Défense area
     st.markdown("---")
@@ -465,200 +589,396 @@ if page == "Overview":
 
     with col2:
         st.subheader("📅 Next Departures")
-        render_schedule_summary(all_data["schedules"])
+        render_enhanced_schedule_summary(all_data["schedules"])
 
 elif page == "Route Planner":
     st.title("🗺️ La Défense Route Planner")
     st.subheader("Find the best route based on real-time conditions")
 
-    # Enhanced route planner with more transport options
+    # Initialize session state
+    initialize_route_planner_state()
+
+    # Enhanced route planner with proper state management
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("### 📍 Journey Details")
 
-        # Origin selection with better filtering
+        # Origin selection with session state
         available_stations = all_data["stations"]["name"].unique() if not all_data["stations"].empty else []
+        if len(available_stations) == 0:
+            available_stations = ["La Défense Grande Arche", "Esplanade de La Défense", "Charles de Gaulle-Étoile",
+                                  "Châtelet-Les Halles"]
+
+        # Find current index for origin
+        try:
+            origin_index = list(available_stations).index(st.session_state.route_origin)
+        except ValueError:
+            origin_index = 0
+            st.session_state.route_origin = available_stations[0]
+
         origin = st.selectbox(
             "🚀 Origin Station",
-            ["La Défense Grande Arche"] + list(available_stations),
-            help="Select your starting point"
+            available_stations,
+            index=origin_index,
+            help="Select your starting point",
+            key="origin_selectbox"
         )
 
-        # Transport preferences with new options
+        # Update session state when origin changes
+        if origin != st.session_state.route_origin:
+            st.session_state.route_origin = origin
+            st.rerun()
+
+        # Transport preferences with session state
         st.markdown("### 🎯 Travel Preferences")
 
         pref_col1, pref_col2 = st.columns(2)
         with pref_col1:
-            time_pref = st.slider("⏱️ Prioritize speed", 0.0, 1.0, 1.0)
-            transfer_pref = st.slider("🔄 Minimize transfers", 0.0, 1.0, 0.3)
+            time_pref = st.slider(
+                "⏱️ Prioritize speed",
+                0.0, 1.0,
+                st.session_state.route_preferences['time_pref'],
+                key="time_slider_unique"
+            )
+            transfer_pref = st.slider(
+                "🔄 Minimize transfers",
+                0.0, 1.0,
+                st.session_state.route_preferences['transfer_pref'],
+                key="transfer_slider_unique"
+            )
 
         with pref_col2:
-            comfort_pref = st.slider("💺 Prefer comfort", 0.0, 1.0, 0.5)
-            cost_pref = st.slider("💰 Minimize cost", 0.0, 1.0, 0.2)
+            comfort_pref = st.slider(
+                "💺 Prefer comfort",
+                0.0, 1.0,
+                st.session_state.route_preferences['comfort_pref'],
+                key="comfort_slider_unique"
+            )
+            cost_pref = st.slider(
+                "💰 Minimize cost",
+                0.0, 1.0,
+                st.session_state.route_preferences['cost_pref'],
+                key="cost_slider_unique"
+            )
 
-        # Accessibility and environmental preferences
-        access_pref = st.checkbox("♿ Require wheelchair accessibility")
-        eco_friendly = st.checkbox("🌱 Prefer eco-friendly routes")
+        # Update preferences in session state
+        st.session_state.route_preferences = {
+            'time_pref': time_pref,
+            'transfer_pref': transfer_pref,
+            'comfort_pref': comfort_pref,
+            'cost_pref': cost_pref
+        }
 
-        # Transport mode preferences
+        # Accessibility and environmental preferences with session state
+        access_pref = st.checkbox(
+            "♿ Require wheelchair accessibility",
+            value=st.session_state.route_accessibility,
+            key="access_check_unique"
+        )
+        st.session_state.route_accessibility = access_pref
+
+        eco_friendly = st.checkbox(
+            "🌱 Prefer eco-friendly routes",
+            value=st.session_state.route_eco_friendly,
+            key="eco_check_unique"
+        )
+        st.session_state.route_eco_friendly = eco_friendly
+
+        # Transport mode preferences with session state
         st.markdown("### 🚊 Preferred Transport")
         transport_modes = st.multiselect(
             "Select preferred transport modes",
             ["Metro", "RER", "Transilien", "Bus", "Walking"],
-            default=["Metro", "RER", "Transilien"],
-            help="Choose which transport types to include in route planning"
+            default=st.session_state.route_transport_modes,
+            help="Choose which transport types to include in route planning",
+            key="transport_multiselect_unique"
         )
+        st.session_state.route_transport_modes = transport_modes
 
     with col2:
         st.markdown("### 📍 Destination & Timing")
 
+        # Filter out origin from destination options
+        destination_options = [station for station in available_stations if station != origin]
+        if len(destination_options) == 0:
+            destination_options = ["Châtelet-Les Halles", "Charles de Gaulle-Étoile", "Nation"]
+
+        # Find current index for destination
+        try:
+            if st.session_state.route_destination and st.session_state.route_destination in destination_options:
+                dest_index = destination_options.index(st.session_state.route_destination)
+            else:
+                dest_index = 0
+                st.session_state.route_destination = destination_options[0]
+        except (ValueError, IndexError):
+            dest_index = 0
+            st.session_state.route_destination = destination_options[0] if destination_options else None
+
         destination = st.selectbox(
             "🎯 Destination",
-            available_stations if len(available_stations) > 0 else ["Please select destination"]
+            destination_options,
+            index=dest_index,
+            help="Select your destination",
+            key="destination_select_unique"
         )
 
-        departure_time = st.time_input(
-            "⏰ Departure time",
-            datetime.now().time(),
-            help="When do you want to depart?"
-        )
+        # Update destination in session state
+        if destination != st.session_state.route_destination:
+            st.session_state.route_destination = destination
 
-        # Journey type
+        # FIXED: Departure time with proper session state management
+        st.markdown("#### ⏰ Departure Time")
+
+        # Journey type with session state
         journey_type = st.radio(
             "📅 Journey Type",
             ["Now", "Scheduled", "Return Journey"],
-            horizontal=True
+            index=["Now", "Scheduled", "Return Journey"].index(st.session_state.route_journey_type),
+            horizontal=True,
+            key="journey_type_unique"
         )
+        st.session_state.route_journey_type = journey_type
 
-    if st.button("🔍 Find Routes", use_container_width=True, type="primary"):
+        # Conditional departure time input based on journey type
+        if journey_type == "Now":
+            # For "Now", use current time but don't make it editable
+            departure_time = datetime.now().time()
+            st.info(f"🕐 Departing now: {departure_time.strftime('%H:%M')}")
+            # Update session state to current time
+            st.session_state.route_departure_time = departure_time
+
+        elif journey_type == "Scheduled":
+            # For "Scheduled", allow time editing with proper state management
+            st.write("Select your preferred departure time:")
+
+            # Create time input with session state
+            departure_time = st.time_input(
+                "Departure time",
+                value=st.session_state.route_departure_time,
+                help="Choose when you want to depart",
+                key="departure_time_input_unique"
+            )
+
+            # Update session state when time changes
+            if departure_time != st.session_state.route_departure_time:
+                st.session_state.route_departure_time = departure_time
+                # Don't rerun immediately for time input to allow smooth editing
+
+            # Show selected time
+            st.success(f"🕐 Scheduled departure: {departure_time.strftime('%H:%M')}")
+
+        else:  # Return Journey
+            # For return journey, show two time inputs
+            st.write("Plan your return journey:")
+
+            outbound_time = st.time_input(
+                "Outbound departure",
+                value=st.session_state.route_departure_time,
+                key="outbound_time_unique"
+            )
+
+            # Default return time 4 hours later
+            return_default = (datetime.combine(datetime.today(), outbound_time) + timedelta(hours=4)).time()
+            return_time = st.time_input(
+                "Return departure",
+                value=return_default,
+                key="return_time_unique"
+            )
+
+            departure_time = outbound_time  # Use outbound time for calculation
+            st.session_state.route_departure_time = departure_time
+
+            st.info(f"🔄 Outbound: {outbound_time.strftime('%H:%M')} | Return: {return_time.strftime('%H:%M')}")
+
+        # Show current selections with better formatting
+        st.markdown("### 📝 Current Selection")
+
+        # Create a nice summary box
+        selection_summary = f"""
+        **🚀 From:** {origin}  
+        **🎯 To:** {destination}  
+        **🕐 When:** {departure_time.strftime('%H:%M')} ({journey_type.lower()})  
+        **🚊 Modes:** {', '.join(transport_modes)}  
+        **♿ Accessible:** {'Yes' if access_pref else 'No'}  
+        **🌱 Eco-friendly:** {'Yes' if eco_friendly else 'No'}
+        """
+
+        st.info(selection_summary)
+
+    # Only show button if transport modes are selected and destinations are different
+    if not transport_modes:
+        st.warning("⚠️ Please select at least one transport mode to find routes.")
+    elif origin == destination:
+        st.error("❌ Origin and destination cannot be the same. Please select different stations.")
+    else:
+        # Add some spacing
         st.markdown("---")
-        st.subheader("🛤️ Recommended Routes")
 
-        # Enhanced route calculation with all transport types
-        routes = {
-            "🚀 Fastest Route": {
-                "route_details": [
-                    {
-                        "transport_type": "metro",
-                        "line": "1",
-                        "from_station": origin,
-                        "to_station": "Esplanade de La Défense",
-                        "travel_time": 5,
-                        "congestion_factor": 1.0,
-                        "emissions_g": 20
-                    },
-                    {
-                        "transport_type": "walking",
-                        "line": "",
-                        "from_station": "Esplanade de La Défense",
-                        "to_station": destination,
-                        "travel_time": 7,
-                        "congestion_factor": 1.0,
-                        "emissions_g": 0
-                    }
-                ],
-                "total_time": 12,
-                "num_transfers": 1,
-                "total_emissions": 20,
-                "accessibility_score": 0.9
-            },
-            "🌱 Eco Route": {
-                "route_details": [
-                    {
-                        "transport_type": "rer",
-                        "line": "E",
-                        "from_station": origin,
-                        "to_station": "Grande Arche",
-                        "travel_time": 8,
-                        "congestion_factor": 1.1,
-                        "emissions_g": 12
-                    },
-                    {
-                        "transport_type": "walking",
-                        "line": "",
-                        "from_station": "Grande Arche",
-                        "to_station": destination,
-                        "travel_time": 5,
-                        "congestion_factor": 1.0,
-                        "emissions_g": 0
-                    }
-                ],
-                "total_time": 13,
-                "num_transfers": 1,
-                "total_emissions": 12,
-                "accessibility_score": 0.95
-            },
-            "🚌 Bus Route": {
-                "route_details": [
-                    {
-                        "transport_type": "bus",
-                        "line": "144",
-                        "from_station": origin,
-                        "to_station": "CNIT",
-                        "travel_time": 10,
-                        "congestion_factor": 1.3,
-                        "emissions_g": 45
-                    },
-                    {
-                        "transport_type": "walking",
-                        "line": "",
-                        "from_station": "CNIT",
-                        "to_station": destination,
-                        "travel_time": 3,
-                        "congestion_factor": 1.0,
-                        "emissions_g": 0
-                    }
-                ],
-                "total_time": 13,
-                "num_transfers": 1,
-                "total_emissions": 45,
-                "accessibility_score": 0.7
+        # Create a more prominent find routes button
+        button_col1, button_col2, button_col3 = st.columns([1, 2, 1])
+        with button_col2:
+            find_routes_clicked = st.button(
+                "🔍 Find Routes",
+                use_container_width=True,
+                type="primary",
+                key="find_routes_btn_unique"
+            )
+
+        if find_routes_clicked:
+            st.markdown("---")
+            st.subheader("🛤️ Recommended Routes")
+
+            # Prepare preferences dictionary
+            preferences = {
+                'time_pref': time_pref,
+                'transfer_pref': transfer_pref,
+                'comfort_pref': comfort_pref,
+                'cost_pref': cost_pref,
+                'accessibility': access_pref,
+                'eco_pref': 1.0 if eco_friendly else 0.2,
+                'accessibility_pref': 1.0 if access_pref else 0.1
             }
-        }
 
-        # Filter routes based on preferences
-        if eco_friendly:
-            # Sort by emissions
-            routes = dict(sorted(routes.items(), key=lambda x: x[1]["total_emissions"]))
+            # Calculate actual routes with loading spinner
+            with st.spinner(f"🔍 Finding optimal routes from {origin} to {destination}..."):
+                try:
 
-        # Display routes with enhanced information
-        route_cols = st.columns(len(routes))
+                    routes = calculate_routes_cached_with_time_fix(
+    origin=origin,
+    destination=destination,
+    preferences=preferences,
+    transport_modes=transport_modes,
+    stations_df=all_data["stations"],
+    schedules_df=all_data["schedules"],
+    traffic_df=all_data["traffic_status"],
+    departure_time=departure_time  # ← CRITICAL: This was missing!
+)
 
-        for idx, (route_name, route_data) in enumerate(routes.items()):
-            with route_cols[idx]:
-                # Calculate scores
-                time_score = max(0, 100 - (route_data["total_time"] - 10) * 5)
-                eco_score = max(0, 100 - route_data["total_emissions"])
-                access_score = route_data["accessibility_score"] * 100
+                except Exception as e:
+                    st.error(f"Error calculating routes: {str(e)}")
+                    routes = {"Error": {"message": str(e)}}
 
-                st.markdown(f"""
-                <div style="
-                    border: 2px solid #e0e0e0; 
-                    border-radius: 10px; 
-                    padding: 15px; 
-                    margin: 10px 0;
-                    background: white;
-                ">
-                    <h4 style="color: #1f77b4; margin-top: 0;">{route_name}</h4>
-                    <p><strong>⏱️ Total time:</strong> {route_data['total_time']} min</p>
-                    <p><strong>🔄 Transfers:</strong> {route_data['num_transfers']}</p>
-                    <p><strong>🌱 Emissions:</strong> {route_data['total_emissions']}g CO₂</p>
-                    <p><strong>♿ Accessibility:</strong> {access_score:.0f}%</p>
-                </div>
-                """, unsafe_allow_html=True)
+            # Display results
+            if "Error" in routes or "No routes found" in routes:
+                st.error(
+                    "❌ Could not find routes with the selected criteria. Try selecting more transport modes or different stations.")
 
-                # Route details
-                with st.expander("View Route Details"):
-                    for step in route_data["route_details"]:
-                        transport_display = {
-                            "metro": "🚇 Metro",
-                            "rer": "🚄 RER",
-                            "bus": "🚌 Bus",
-                            "walking": "🚶 Walking"
-                        }.get(step['transport_type'], step['transport_type'])
+                # Suggestions for better results
+                st.markdown("### 💡 Suggestions:")
+                st.info("• Try selecting more transport modes (Metro + RER + Bus)")
+                st.info("• Check if the destination name is spelled correctly")
+                st.info("• Try a nearby station if the exact station isn't found")
 
-                        st.write(f"{transport_display} {step['line']} from **{step['from_station']}** to **{step['to_station']}** - {step['travel_time']} min")
+            else:
+                # Display routes with enhanced information
+                if len(routes) == 1:
+                    route_cols = [st.container()]
+                elif len(routes) == 2:
+                    route_cols = st.columns(2)
+                else:
+                    route_cols = st.columns(min(3, len(routes)))
+
+                for idx, (route_name, route_data) in enumerate(routes.items()):
+                    col_idx = idx % len(route_cols)
+
+                    with route_cols[col_idx]:
+                        # Calculate scores for display
+                        time_score = max(0, 100 - (route_data.get("total_time", 30) - 10) * 2)
+                        eco_score = max(0, 100 - route_data.get("total_emissions", 50) * 0.5)
+                        access_score = route_data.get("accessibility_score", 0.8) * 100
+
+                        # Color coding based on route type
+                        if "Metro" in route_name or "🚇" in route_name:
+                            border_color = "#1f77b4"
+                        elif "RER" in route_name or "🚄" in route_name:
+                            border_color = "#ff7f0e"
+                        elif "Bus" in route_name or "🚌" in route_name:
+                            border_color = "#2ca02c"
+                        elif "Walking" in route_name or "🚶" in route_name:
+                            border_color = "#d62728"
+                        else:
+                            border_color = "#9467bd"
+
+                        # Enhanced route card with departure time
+                        departure_display = f" at {departure_time.strftime('%H:%M')}" if journey_type != "Now" else ""
+
+                        st.markdown(f"""
+                        <div style="
+                            border: 2px solid {border_color}; 
+                            border-radius: 10px; 
+                            padding: 15px; 
+                            margin: 10px 0;
+                            background: white;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        ">
+                            <h4 style="color: {border_color}; margin-top: 0;">{route_name}</h4>
+                            <p><strong>🕐 Departure:</strong> {departure_time.strftime('%H:%M')}</p>
+                            <p><strong>⏱️ Total time:</strong> {route_data.get('total_time', 'N/A')} min</p>
+                            <p><strong>🔄 Transfers:</strong> {route_data.get('num_transfers', 0)}</p>
+                            <p><strong>🌱 Emissions:</strong> {route_data.get('total_emissions', 0)}g CO₂</p>
+                            <p><strong>♿ Accessibility:</strong> {access_score:.0f}%</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        # Route details with timing information
+                        with st.expander("View Route Details", expanded=False):
+                            route_details = route_data.get("route_details", [])
+
+                            if route_details:
+                                for step in route_details:
+                                    transport_display = {
+                                        "metro": "🚇 Metro",
+                                        "rer": "🚄 RER",
+                                        "rers": "🚄 RER",
+                                        "bus": "🚌 Bus",
+                                        "transilien": "🚂 Transilien",
+                                        "walking": "🚶 Walking"
+                                    }.get(step.get('transport_type', '').lower(),
+                                          step.get('transport_type', 'Transport'))
+
+                                    line_text = f" Line {step.get('line', '')}" if step.get('line') else ""
+
+                                    st.write(f"**{transport_display}{line_text}**")
+                                    st.write(f"From: {step.get('from_station', 'N/A')}")
+                                    st.write(f"To: {step.get('to_station', 'N/A')}")
+                                    st.write(f"Duration: {step.get('travel_time', 0):.0f} minutes")
+
+                                    if step.get('departure_time'):
+                                        st.write(f"Departure: {step.get('departure_time')}")
+                                    if step.get('arrival_time'):
+                                        st.write(f"Arrival: {step.get('arrival_time')}")
+                                    if step.get('direction'):
+                                        st.write(f"Direction: {step.get('direction')}")
+                                    if step.get('emissions_g', 0) > 0:
+                                        st.write(f"Emissions: {step.get('emissions_g', 0):.0f}g CO₂")
+
+                                    st.write("---")
+                            else:
+                                st.write("No detailed route information available")
+
+                # Summary recommendations
+                st.markdown("---")
+                st.subheader("💡 Route Recommendations")
+
+                if routes:
+                    route_values = [v for v in routes.values() if isinstance(v, dict) and 'total_time' in v]
+
+                    if route_values:
+                        best_time = min(route_values, key=lambda x: x.get('total_time', 999))
+                        best_eco = min(route_values, key=lambda x: x.get('total_emissions', 999))
+                        best_access = max(route_values, key=lambda x: x.get('accessibility_score', 0))
+
+                        rec_col1, rec_col2, rec_col3 = st.columns(3)
+
+                        with rec_col1:
+                            st.success(f"⚡ **Fastest:** {best_time.get('total_time', 'N/A')} min")
+
+                        with rec_col2:
+                            st.success(f"🌱 **Greenest:** {best_eco.get('total_emissions', 'N/A')}g CO₂")
+
+                        with rec_col3:
+                            st.success(f"♿ **Most Accessible:** {best_access.get('accessibility_score', 0):.0%}")
 
 elif page == "Weather Impact":
     st.title("🌤️ Weather Impact on Mobility")
@@ -676,47 +996,103 @@ elif page == "Weather Impact":
         st.subheader("🚊 Transport Recommendations by Weather")
 
         current = all_data["current_weather"].iloc[0]
-        precip = current.get('precipitation', 0)
-        wind_speed = current.get('wind_speed', 0)
-        temp = current.get('temperature', 15)
+
+        # SAFE extraction of weather values (FIXES THE ERROR)
+        precip = safe_get_weather_value(current, 'precipitation', 0)
+        wind_speed = safe_get_weather_value(current, 'wind_speed', 0)
+        temp = safe_get_weather_value(current, 'temperature', 15)
+        visibility = safe_get_weather_value(current, 'visibility', 10)
+
 
         # Create recommendation cards
         recommendations = []
 
+        # NOW SAFE: Precipitation-based recommendations
         if precip > 5:
             recommendations.extend([
-                {"icon": "🚇", "title": "Metro Line 1", "message": "Best choice during heavy rain - fully underground and automated", "priority": "high"},
-                {"icon": "🚄", "title": "RER A/E", "message": "Good alternative with covered platforms at La Défense", "priority": "medium"},
-                {"icon": "⏱️", "title": "Travel Time", "message": "Allow extra 10-15 minutes due to slower traffic", "priority": "medium"}
+                {"icon": "🚇", "title": "Metro Line 1",
+                 "message": "Best choice during heavy rain - fully underground and automated", "priority": "high"},
+                {"icon": "🚄", "title": "RER A/E", "message": "Good alternative with covered platforms at La Défense",
+                 "priority": "medium"},
+                {"icon": "⏱️", "title": "Travel Time", "message": "Allow extra 10-15 minutes due to slower traffic",
+                 "priority": "medium"}
+            ])
+        elif precip > 1:
+            recommendations.append(
+                {"icon": "🌧️", "title": "Light Rain", "message": "Minor delays possible, consider covered transport",
+                 "priority": "low"}
+            )
+
+        # Wind-based recommendations
+        if wind_speed > 50:
+            recommendations.extend([
+                {"icon": "🚌", "title": "Bus Services",
+                 "message": "May experience significant delays due to strong winds", "priority": "high"},
+                {"icon": "🚶‍♀️", "title": "Walking Areas",
+                 "message": "Avoid open areas around Grande Arche - dangerous wind conditions", "priority": "high"}
+            ])
+        elif wind_speed > 30:
+            recommendations.extend([
+                {"icon": "🚌", "title": "Bus Services", "message": "May experience delays due to moderate winds",
+                 "priority": "medium"},
+                {"icon": "🚶‍♀️", "title": "Walking Areas",
+                 "message": "Take care around Grande Arche - strong wind corridors", "priority": "medium"}
             ])
 
-        if wind_speed > 30:
+        # Temperature-based recommendations
+        if temp < 0:
             recommendations.extend([
-                {"icon": "🚌", "title": "Bus Services", "message": "May experience delays due to high winds", "priority": "low"},
-                {"icon": "🚶‍♀️", "title": "Walking Areas", "message": "Take care around Grande Arche - strong wind corridors", "priority": "high"}
+                {"icon": "❄️", "title": "Platform Safety",
+                 "message": "Platforms may be icy - allow extra time and wear appropriate footwear",
+                 "priority": "high"},
+                {"icon": "🏢", "title": "Indoor Routes",
+                 "message": "Use Les Quatre Temps for warm pedestrian connections", "priority": "medium"}
+            ])
+        elif temp < 5:
+            recommendations.extend([
+                {"icon": "🧥", "title": "Cold Weather", "message": "Dress warmly for outdoor waiting areas",
+                 "priority": "low"},
+                {"icon": "🏢", "title": "Indoor Routes",
+                 "message": "Consider indoor connections through shopping centers", "priority": "low"}
+            ])
+        elif temp > 35:
+            recommendations.extend([
+                {"icon": "🔥", "title": "Extreme Heat",
+                 "message": "Seek air-conditioned transport, avoid prolonged outdoor waiting", "priority": "high"},
+                {"icon": "💧", "title": "Hydration",
+                 "message": "Stay hydrated - water fountains available in main stations", "priority": "medium"}
+            ])
+        elif temp > 28:
+            recommendations.extend([
+                {"icon": "🔆", "title": "Hot Weather", "message": "Metro Line 1 has air conditioning",
+                 "priority": "medium"},
+                {"icon": "💧", "title": "Hydration", "message": "Stay hydrated during travel", "priority": "low"}
             ])
 
-        if temp < 5:
+        # Visibility-based recommendations
+        if visibility < 1:
             recommendations.extend([
-                {"icon": "❄️", "title": "Platform Safety", "message": "Platforms may be slippery - allow extra time", "priority": "medium"},
-                {"icon": "🏢", "title": "Indoor Routes", "message": "Use Les Quatre Temps for pedestrian connections", "priority": "low"}
+                {"icon": "🌫️", "title": "Poor Visibility",
+                 "message": "Heavy fog - use underground transport exclusively", "priority": "high"},
+                {"icon": "⏱️", "title": "Travel Time", "message": "Allow double the normal travel time",
+                 "priority": "high"}
             ])
-
-        if temp > 28:
-            recommendations.extend([
-                {"icon": "🔆", "title": "Metro Comfort", "message": "Air conditioning available on Metro Line 1", "priority": "medium"},
-                {"icon": "💧", "title": "Hydration", "message": "Stay hydrated - water fountains available in main stations", "priority": "low"}
-            ])
+        elif visibility < 5:
+            recommendations.append(
+                {"icon": "🌫️", "title": "Reduced Visibility", "message": "Fog conditions - allow extra travel time",
+                 "priority": "medium"}
+            )
 
         # Display recommendations by priority
         if recommendations:
             priority_order = ["high", "medium", "low"]
             priority_colors = {"high": "#dc3545", "medium": "#fd7e14", "low": "#28a745"}
+            priority_icons = {"high": "🚨", "medium": "⚠️", "low": "💡"}
 
             for priority in priority_order:
                 priority_recs = [r for r in recommendations if r["priority"] == priority]
                 if priority_recs:
-                    st.markdown(f"### {priority.title()} Priority")
+                    st.markdown(f"### {priority_icons[priority]} {priority.title()} Priority")
                     for rec in priority_recs:
                         st.markdown(f"""
                         <div style="
@@ -730,7 +1106,54 @@ elif page == "Weather Impact":
                             <p style="margin: 0; color: #666;">{rec['message']}</p>
                         </div>
                         """, unsafe_allow_html=True)
+
+        # Calculate and display overall impact
+        st.markdown("---")
+        st.subheader("📊 Overall Weather Impact Assessment")
+
+        # Calculate composite impact score
+        impact_score = 1.0
+
+        if precip > 10:
+            impact_score *= 1.5
+        elif precip > 5:
+            impact_score *= 1.3
+        elif precip > 1:
+            impact_score *= 1.1
+
+        if wind_speed > 50:
+            impact_score *= 1.4
+        elif wind_speed > 30:
+            impact_score *= 1.2
+
+        if temp < -5 or temp > 40:
+            impact_score *= 1.3
+        elif temp < 0 or temp > 35:
+            impact_score *= 1.15
+
+        if visibility < 1:
+            impact_score *= 1.6
+        elif visibility < 5:
+            impact_score *= 1.2
+
+        # Cap maximum impact
+        impact_score = min(impact_score, 3.0)
+
+        # Display impact assessment
+        if impact_score >= 2.0:
+            st.error(f"🔴 **Severe Impact** - Travel time multiplier: {impact_score:.1f}x")
+            st.error("Consider postponing non-essential travel or using underground transport exclusively.")
+        elif impact_score >= 1.5:
+            st.warning(f"🟡 **Moderate Impact** - Travel time multiplier: {impact_score:.1f}x")
+            st.warning("Allow extra travel time and prefer covered transport options.")
+        elif impact_score >= 1.2:
+            st.info(f"🟢 **Minor Impact** - Travel time multiplier: {impact_score:.1f}x")
+            st.info("Slight delays possible, plan accordingly.")
         else:
+            st.success(f"✅ **Minimal Impact** - Travel time multiplier: {impact_score:.1f}x")
+            st.success("Excellent conditions for all transport modes!")
+
+        if not recommendations:
             st.success("🌟 Current weather conditions are ideal for all transport modes!")
 
     else:
@@ -738,7 +1161,7 @@ elif page == "Weather Impact":
 
 elif page == "Transport Analysis":
     st.title("🚊 Transportation Analysis")
-
+    create_transport_dashboard_section(all_data["schedules"], all_data["traffic_status"])
     # Enhanced transport analysis with new lines
     col1, col2 = st.columns([2, 1])
 
@@ -793,15 +1216,13 @@ elif page == "Station Information":
     st.title("🚉 Station Information")
 
     # Enhanced station information with better filtering
-    tab1, tab2, tab3 = st.tabs(["🔍 Station Details", "♿ Accessibility", "📊 Station Statistics"])
+    tab1, tab2 = st.tabs(["🔍 Station Details", "📊 Station Statistics"])
 
     with tab1:
         render_station_details(all_data["stations"])
 
-    with tab2:
-        render_accessibility_overview(all_data["stations"])
 
-    with tab3:
+    with tab2:
         if not all_data["stations"].empty:
             st.subheader("📈 Station Network Statistics")
 
@@ -838,38 +1259,38 @@ elif page == "Data Quality":
     # Enhanced data quality dashboard
     col1, col2 = st.columns([1, 1])
 
+    # with col1:
+    #     # Display quality score
+    #     if "passed" in quality and "total" in quality:
+    #         quality_percentage = (quality["passed"] / quality["total"]) * 100
+    #
+    #         # Create a gauge chart
+    #         fig = go.Figure(go.Indicator(
+    #             mode="gauge+number",
+    #             value=quality_percentage,
+    #             domain={'x': [0, 1], 'y': [0, 1]},
+    #             title={'text': "Data Quality Score"},
+    #             gauge={
+    #                 'axis': {'range': [0, 100]},
+    #                 'bar': {'color': "darkblue"},
+    #                 'steps': [
+    #                     {'range': [0, 60], 'color': "#ffcccc"},
+    #                     {'range': [60, 80], 'color': "#ffffcc"},
+    #                     {'range': [80, 100], 'color': "#ccffcc"}
+    #                 ],
+    #                 'threshold': {
+    #                     'line': {'color': "red", 'width': 4},
+    #                     'thickness': 0.75,
+    #                     'value': 90
+    #                 }
+    #             }
+    #         ))
+    #
+    #         st.plotly_chart(fig, use_container_width=True)
+    #     else:
+    #         st.info("No detailed quality metrics available")
+
     with col1:
-        # Display quality score
-        if "passed" in quality and "total" in quality:
-            quality_percentage = (quality["passed"] / quality["total"]) * 100
-
-            # Create a gauge chart
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=quality_percentage,
-                domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': "Data Quality Score"},
-                gauge={
-                    'axis': {'range': [0, 100]},
-                    'bar': {'color': "darkblue"},
-                    'steps': [
-                        {'range': [0, 60], 'color': "#ffcccc"},
-                        {'range': [60, 80], 'color': "#ffffcc"},
-                        {'range': [80, 100], 'color': "#ccffcc"}
-                    ],
-                    'threshold': {
-                        'line': {'color': "red", 'width': 4},
-                        'thickness': 0.75,
-                        'value': 90
-                    }
-                }
-            ))
-
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No detailed quality metrics available")
-
-    with col2:
         # Data source health
         st.markdown("### 🏥 Data Source Health")
 
@@ -889,259 +1310,219 @@ elif page == "Data Quality":
             st.markdown(f"{status_icon} **{source}**: {status_text}")
 
     # Detailed quality information
-    st.markdown("---")
-    st.subheader("📋 Quality Details")
+    # st.markdown("---")
+    # st.subheader("📋 Quality Details")
 
-    if "timestamp" in quality:
-        st.write(f"**Last check**: {quality['timestamp']}")
-
-    if "passed" in quality and "total" in quality:
-        st.write(f"**Checks passed**: {quality['passed']}/{quality['total']} ({quality_percentage:.1f}%)")
+    # if "timestamp" in quality:
+    #     st.write(f"**Last check**: {quality['timestamp']}")
+    #
+    # if "passed" in quality and "total" in quality:
+    #     st.write(f"**Checks passed**: {quality['passed']}/{quality['total']} ({quality_percentage:.1f}%)")
 
 elif page == "Predictions":
     st.title("🔮 Traffic and Mobility Predictions")
-    st.subheader(f"Forecasts for {current_date}")
+    st.subheader(f"Real-time ML Forecasts for {current_date}")
 
-    # Enhanced predictions with new transport data
-    pred_tab1, pred_tab2, pred_tab3, pred_tab4 = st.tabs([
-        "🚗 Traffic Predictions",
-        "🌤️ Weather Impact",
-        "🚊 Transport Reliability",
-        "🗺️ Congestion Zones"
-    ])
+    # Check if predictions are available
+    predictions = all_data.get("predictions", {})
+    forecasts = all_data.get("forecasts", {})
 
-    with pred_tab1:
-        st.write("Predicted traffic conditions for key routes in La Défense")
+    if not predictions and not forecasts:
+        st.warning("⚠️ Prediction models not available. Please run model training first.")
+        st.info("Run: `python run_historical_and_predictions.py` to set up predictions")
 
-        # Time selection
-        prediction_time = st.slider(
-            "Select hour of day",
-            min_value=0,
-            max_value=23,
-            value=datetime.now().hour
-        )
+        # Show fallback content
+        st.markdown("---")
+        st.subheader("📊 Static Predictions (Demo)")
 
-        # Enhanced prediction data
-        prediction_data = pd.DataFrame({
-            "road_name": [
-                "A14 (Paris → La Défense)",
-                "N13",
-                "Boulevard Circulaire",
-                "Avenue de la Division Leclerc",
-                "Pont de Neuilly",
-                "A86 (Inner Ring)",
-                "A86 (Outer Ring)"
-            ],
-            "normal_travel_time": [12, 8, 5, 4, 6, 15, 18],
-            "predicted_travel_time": [15, 10, 8, 5, 9, 22, 25],
-            "congestion_level": [3, 2, 3, 1, 4, 4, 5],
-            "confidence": [0.85, 0.78, 0.92, 0.88, 0.75, 0.82, 0.79]
-        })
+        # Keep your existing static prediction content as fallback
+        pred_tab1, pred_tab2, pred_tab3, pred_tab4 = st.tabs([
+            "🚗 Traffic Predictions",
+            "🌤️ Weather Impact",
+            "🚊 Transport Reliability",
+            "🗺️ Congestion Zones"
+        ])
 
-        # Enhanced visualization
-        colors = ['#28a745', '#6f42c1', '#ffc107', '#fd7e14', '#dc3545', '#6c757d']
+    else:
+        # Real predictions available - show ML-powered content
+        pred_tab1, pred_tab2, pred_tab3, pred_tab4 = st.tabs([
+            "🚊 Transport Reliability",
+            "📈 24-Hour Forecasts",
+            "⚡ Real-time Insights",
+            "🗺️ Congestion Areas"
+        ])
 
-        fig = go.Figure()
+        with pred_tab1:
+            st.write("Current reliability predictions for all transport lines")
 
-        for i, row in prediction_data.iterrows():
-            congestion = row['congestion_level']
-            confidence = row['confidence']
+            if predictions:
+                # Create detailed prediction cards
+                for line_key, prediction in predictions.items():
+                    transport_type, line = line_key.split('_', 1)
 
-            fig.add_trace(go.Bar(
-                x=[row['road_name']],
-                y=[row['predicted_travel_time']],
-                name=row['road_name'],
-                marker_color=colors[congestion] if congestion < len(colors) else colors[-1],
-                text=f"{row['predicted_travel_time']} min<br>({confidence:.0%} confidence)",
-                textposition='auto',
-                showlegend=False
-            ))
+                    # Get line display info
+                    line_icons = {
+                        "metro": "🚇", "rers": "🚄",
+                        "transilien": "🚂", "buses": "🚌"
+                    }
 
-        fig.update_layout(
-            title="Predicted Travel Times with Confidence Levels",
-            xaxis_title="Road",
-            yaxis_title="Travel Time (minutes)",
-            height=400
-        )
+                    icon = line_icons.get(transport_type, "🚊")
+                    line_name = f"{icon} {transport_type.title()} {line}"
 
-        st.plotly_chart(fig, use_container_width=True)
+                    with st.expander(f"{line_name} - Detailed Prediction", expanded=True):
+                        pred_col1, pred_col2, pred_col3 = st.columns(3)
 
-    with pred_tab2:
-        st.write("Predicted impact of weather conditions on mobility")
+                        with pred_col1:
+                            reliability = prediction.get('reliability', 0)
+                            st.metric(
+                                "Reliability Score",
+                                f"{reliability:.1%}",
+                                help="Probability of on-time service"
+                            )
 
-        if not all_data["hourly_weather"].empty:
-            current_weather = all_data["current_weather"].iloc[0] if not all_data["current_weather"].empty else None
+                        with pred_col2:
+                            delay = prediction.get('expected_delay_minutes', 0)
+                            st.metric(
+                                "Expected Delay",
+                                f"{delay:.1f} min",
+                                help="Predicted additional travel time"
+                            )
 
-            # Enhanced weather impact analysis
-            weather_impact = pd.DataFrame({
-                "condition": ["Clear", "Light Rain", "Heavy Rain", "Snow", "High Winds", "Fog"],
-                "metro_impact": [1.0, 1.05, 1.1, 1.2, 1.0, 1.05],
-                "rer_impact": [1.0, 1.1, 1.3, 1.8, 1.2, 1.4],
-                "bus_impact": [1.0, 1.2, 1.5, 2.0, 1.4, 1.6],
-                "walking_impact": [1.0, 1.3, 2.0, 3.0, 1.8, 2.2]
-            })
+                        with pred_col3:
+                            load = prediction.get('passenger_load', 0)
+                            st.metric(
+                                "Passenger Load",
+                                f"{load:.0%}",
+                                help="Estimated capacity utilization"
+                            )
 
-            # Current conditions impact
-            st.subheader("Current Weather Impact on Transport")
+                        # Congestion info if available
+                        if 'congestion_level' in prediction:
+                            congestion = prediction['congestion_level']
+                            st.info(f"🚗 Road Congestion Level: **{congestion}**")
+            else:
+                st.error("No real-time predictions available")
 
-            current_condition = "Clear"
-            if current_weather is not None:
-                precip = current_weather.get('precipitation', 0)
-                wind_speed = current_weather.get('wind_speed', 0)
-                visibility = current_weather.get('visibility', 10)
+        with pred_tab2:
+            st.write("24-hour reliability forecasts for main transport lines")
 
-                if precip > 10:
-                    current_condition = "Heavy Rain"
-                elif precip > 2:
-                    current_condition = "Light Rain"
-                elif wind_speed > 40:
-                    current_condition = "High Winds"
-                elif visibility < 1:
-                    current_condition = "Fog"
-
-            # Display impact matrix
-            impact_row = weather_impact[weather_impact['condition'] == current_condition]
-            if not impact_row.empty:
-                impact_data = impact_row.iloc[0]
-
-                transport_impacts = {
-                    "🚇 Metro": impact_data['metro_impact'],
-                    "🚄 RER": impact_data['rer_impact'],
-                    "🚌 Bus": impact_data['bus_impact'],
-                    "🚶 Walking": impact_data['walking_impact']
-                }
-
-                cols = st.columns(len(transport_impacts))
-                for i, (transport, impact) in enumerate(transport_impacts.items()):
-                    with cols[i]:
-                        delay_pct = (impact - 1) * 100
-                        st.metric(
-                            transport,
-                            f"{impact:.1f}x",
-                            f"{delay_pct:+.0f}%" if delay_pct != 0 else "No impact"
-                        )
-
-    with pred_tab3:
-        st.write("Predicted reliability for each transport line")
-
-        if not all_data["traffic_status"].empty:
-            # Create reliability predictions based on current status
-            reliability_data = []
-
-            for _, line in all_data["traffic_status"].iterrows():
-                transport_type = line["transport_type"]
-                line_id = line["line"]
-                status = line["status"]
-
-                # Base reliability scores by transport type
-                base_reliability = {
-                    "metro": 0.95,
-                    "rers": 0.92,
-                    "transilien": 0.88,
-                    "buses": 0.85,
-                    "idfm": 0.90
-                }.get(transport_type, 0.85)
-
-                # Adjust based on current status
-                status_adjustments = {
-                    "normal": 0.0,
-                    "minor": -0.05,
-                    "major": -0.15,
-                    "critical": -0.30
-                }
-
-                adjusted_reliability = base_reliability + status_adjustments.get(status, 0)
-                adjusted_reliability = max(0.4, min(1.0, adjusted_reliability))
-
-                # Generate hourly predictions
-                hourly_predictions = []
-                for hour in range(24):
-                    # Add time-based variations
-                    if 7 <= hour <= 9 or 17 <= hour <= 19:  # Rush hours
-                        hour_reliability = adjusted_reliability - 0.05
-                    elif 22 <= hour or hour <= 5:  # Night hours
-                        hour_reliability = adjusted_reliability + 0.03
-                    else:
-                        hour_reliability = adjusted_reliability
-
-                    hourly_predictions.append(max(0.4, min(1.0, hour_reliability)))
-
-                reliability_data.append({
-                    "transport_type": transport_type,
-                    "line": line_id,
-                    "current_reliability": adjusted_reliability,
-                    "hourly_predictions": hourly_predictions
-                })
-
-            # Display reliability metrics
-            st.subheader("Current Reliability Scores")
-
-            rel_cols = st.columns(min(4, len(reliability_data)))
-            for i, line_data in enumerate(reliability_data[:4]):  # Show first 4 lines
-                with rel_cols[i % 4]:
-                    reliability_score = line_data["current_reliability"] * 100
-                    line_name = f"{line_data['transport_type'].title()} {line_data['line']}"
-
-                    if reliability_score >= 90:
-                        color = "#28a745"
-                        status_text = "Excellent"
-                    elif reliability_score >= 80:
-                        color = "#ffc107"
-                        status_text = "Good"
-                    elif reliability_score >= 70:
-                        color = "#fd7e14"
-                        status_text = "Fair"
-                    else:
-                        color = "#dc3545"
-                        status_text = "Poor"
-
-                    st.markdown(f"""
-                    <div style="
-                        border: 2px solid {color};
-                        border-radius: 8px;
-                        padding: 15px;
-                        text-align: center;
-                        margin: 5px 0;
-                    ">
-                        <h4 style="margin: 0; color: {color};">{line_name}</h4>
-                        <div style="font-size: 2em; font-weight: bold; color: {color};">
-                            {reliability_score:.0f}%
-                        </div>
-                        <div style="color: #666;">{status_text}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-            # 24-hour reliability forecast
-            if reliability_data:
-                st.subheader("24-Hour Reliability Forecast")
-
-                # Create DataFrame for plotting
-                forecast_df = pd.DataFrame({
-                    'hour': list(range(24))
-                })
-
-                for line_data in reliability_data[:5]:  # Show first 5 lines
-                    line_name = f"{line_data['transport_type'].title()} {line_data['line']}"
-                    forecast_df[line_name] = [r * 100 for r in line_data['hourly_predictions']]
-
-                fig_rel = px.line(
-                    forecast_df,
-                    x='hour',
-                    y=[col for col in forecast_df.columns if col != 'hour'],
-                    title='Predicted Reliability by Hour (%)',
-                    labels={'value': 'Reliability (%)', 'hour': 'Hour of Day'},
-                    range_y=[60, 100]
+            if forecasts:
+                # Select line for forecast
+                available_lines = list(forecasts.keys())
+                selected_line = st.selectbox(
+                    "Select transport line for 24h forecast:",
+                    available_lines,
+                    format_func=lambda x: {
+                        "metro_1": "🚇 Metro Line 1",
+                        "rers_A": "🚄 RER A",
+                        "rers_E": "🚄 RER E"
+                    }.get(x, x)
                 )
 
-                fig_rel.update_layout(
-                    xaxis=dict(tickmode='linear', dtick=2),
-                    hovermode="x unified",
-                    height=400
-                )
+                if selected_line and selected_line in forecasts:
+                    forecast_df = forecasts[selected_line]
 
-                st.plotly_chart(fig_rel, use_container_width=True)
-        else:
-            st.info("No transport status data available for reliability predictions")
+                    # Create reliability forecast chart
+                    fig = px.line(
+                        forecast_df,
+                        x='hour',
+                        y='reliability',
+                        title=f'24-Hour Reliability Forecast - {selected_line.replace("_", " ").title()}',
+                        labels={'reliability': 'Reliability (%)', 'hour': 'Hour of Day'},
+                        range_y=[0.6, 1.0]
+                    )
+
+                    # Add current hour marker
+                    current_hour = datetime.now().hour
+                    fig.add_vline(
+                        x=current_hour,
+                        line_dash="dash",
+                        line_color="red",
+                        annotation_text="Now"
+                    )
+
+                    # Add peak hour indicators
+                    fig.add_vrect(x0=7, x1=9, fillcolor="red", opacity=0.1, annotation_text="Morning Peak")
+                    fig.add_vrect(x0=17, x1=19, fillcolor="red", opacity=0.1, annotation_text="Evening Peak")
+
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Show next 6 hours details
+                    st.subheader("Next 6 Hours Detailed Forecast")
+                    next_6h = forecast_df.head(6)
+
+                    forecast_cols = st.columns(6)
+                    for i, (_, row) in enumerate(next_6h.iterrows()):
+                        with forecast_cols[i]:
+                            hour_time = f"{row['hour']:02d}:00"
+                            reliability = row.get('reliability', 0)
+                            delay = row.get('expected_delay_minutes', 0)
+
+                            color = "#28a745" if reliability >= 0.9 else "#ffc107" if reliability >= 0.8 else "#dc3545"
+
+                            st.markdown(f"""
+                            <div style="text-align: center; padding: 10px; border: 1px solid {color}; border-radius: 5px;">
+                                <div style="font-weight: bold;">{hour_time}</div>
+                                <div style="color: {color}; font-size: 1.2em;">{reliability:.0%}</div>
+                                <div style="font-size: 0.8em;">+{delay:.1f}min</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+            else:
+                st.error("No 24-hour forecasts available")
+
+        with pred_tab3:
+            st.write("Real-time insights and recommendations based on ML predictions")
+
+            if predictions:
+                # Generate insights based on predictions
+                insights = []
+
+                for line_key, prediction in predictions.items():
+                    transport_type, line = line_key.split('_', 1)
+                    reliability = prediction.get('reliability', 0)
+                    delay = prediction.get('expected_delay_minutes', 0)
+                    load = prediction.get('passenger_load', 0)
+
+                    line_display = f"{transport_type.title()} {line}"
+
+                    if reliability < 0.7:
+                        insights.append({
+                            "type": "warning",
+                            "title": f"⚠️ {line_display} - Low Reliability",
+                            "message": f"Current reliability: {reliability:.0%}. Consider alternative routes."
+                        })
+                    elif delay > 5:
+                        insights.append({
+                            "type": "info",
+                            "title": f"🕐 {line_display} - Delays Expected",
+                            "message": f"Expected delay: {delay:.1f} minutes. Plan extra travel time."
+                        })
+                    elif load > 0.8:
+                        insights.append({
+                            "type": "info",
+                            "title": f"👥 {line_display} - High Passenger Load",
+                            "message": f"Current load: {load:.0%}. Expect crowded conditions."
+                        })
+                    elif reliability > 0.95 and delay < 2:
+                        insights.append({
+                            "type": "success",
+                            "title": f"✅ {line_display} - Excellent Service",
+                            "message": f"Reliability: {reliability:.0%}, minimal delays expected."
+                        })
+
+                if insights:
+                    st.subheader("🧠 AI-Generated Insights")
+                    for insight in insights:
+                        if insight["type"] == "warning":
+                            st.warning(f"**{insight['title']}**\n\n{insight['message']}")
+                        elif insight["type"] == "info":
+                            st.info(f"**{insight['title']}**\n\n{insight['message']}")
+                        elif insight["type"] == "success":
+                            st.success(f"**{insight['title']}**\n\n{insight['message']}")
+                else:
+                    st.info("All transport lines are operating normally with good reliability.")
+            else:
+                st.error("No real-time insights available")
 
     with pred_tab4:
         st.write("Traffic hotspots and congestion information for La Défense area")
