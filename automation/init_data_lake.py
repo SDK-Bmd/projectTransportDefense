@@ -1,7 +1,3 @@
-"""
-Initialization script for the La Défense mobility data lake
-This script sets up the data lake structure and tests connectivity
-"""
 import os
 import boto3
 from botocore.client import Config
