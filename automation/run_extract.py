@@ -1,7 +1,3 @@
-"""
-Updated automated extraction scheduler for La Défense mobility data lake
-Now includes historical data extraction and prediction model training
-"""
 import schedule
 import time
 import os
