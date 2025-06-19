@@ -32,20 +32,14 @@ def render_station_details(stations_df, selected_station=None):
             col1, col2 = st.columns(2)
 
             with col1:
-                if "type" in columns:
-                    st.markdown(f"**Type**: {station_data['type']}")
-                if "lines" in columns:
-                    st.markdown(f"**Lines**: {station_data['lines']}")
                 if "wheelchair_accessible" in columns:
                     st.markdown(f"**Wheelchair Accessible**: {station_data['wheelchair_accessible']}")
-
+                if "escalator_available" in columns:
+                    st.markdown(f"**Escalator Available**: {station_data['escalator_available']}")
             with col2:
                 if "elevator_available" in columns:
                     st.markdown(f"**Elevator Available**: {station_data['elevator_available']}")
-                if "escalator_available" in columns:
-                    st.markdown(f"**Escalator Available**: {station_data['escalator_available']}")
-                if "num_entrances" in columns:
-                    st.markdown(f"**Number of Entrances**: {station_data['num_entrances']}")
+
 
             # Display station on map if coordinates are available
             if "lat" in columns and "lon" in columns and station_data["lat"] != 0 and station_data["lon"] != 0:
