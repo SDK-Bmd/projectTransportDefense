@@ -90,13 +90,17 @@ def save_parquet_to_data_lake(bucket, key, dataframe):
 
 
 def read_json_from_data_lake(bucket, key):
-    """Read JSON data from the data lake"""
+    """Read JSON data from the data lake with proper error handling"""
     s3 = get_s3_client()
     try:
         response = s3.get_object(Bucket=bucket, Key=key)
         content = response['Body'].read().decode('utf-8')
         logger.info(f"JSON data read from {key}")
         return json.loads(content)
+    except s3.exceptions.NoSuchKey:
+        # File doesn't exist - this is NORMAL for cache misses
+        logger.debug(f"Cache file not found (normal): {key}")
+        return None
     except Exception as e:
         logger.error(f"Error reading JSON from {key}: {str(e)}")
         return None
